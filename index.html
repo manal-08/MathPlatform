@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MATH PLATFORM - Évaluations & Rapports</title>
+<title>MATH PLATFORM - Cloud Sync</title>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
@@ -43,6 +43,7 @@
     --text-main: #ffffff;
     --text-muted: #b8c0e0;
     --success: #10b981;
+    --danger: #ef4444;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
   body {
@@ -78,7 +79,11 @@
   .card-sub { font-size: 0.78rem; color: var(--text-muted); margin-top: 6px; }
   .btn-delete-mini {
     position: absolute; top: 10px; right: 10px; background: rgba(239, 68, 68, 0.2);
-    border: 1px solid rgba(239, 68, 68, 0.4); color: #fca5a5; width: 26px; height: 26px; border-radius: 50%; font-size: 0.75rem; cursor: pointer; display: flex; align-items: center; justify-content: center;
+    border: 1px solid rgba(239, 68, 68, 0.4); color: #fca5a5; width: 28px; height: 28px; border-radius: 50%; font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 5;
+  }
+  .btn-edit-mini {
+    position: absolute; top: 10px; left: 10px; background: rgba(59, 130, 246, 0.2);
+    border: 1px solid rgba(59, 130, 246, 0.4); color: #93c5fd; width: 28px; height: 28px; border-radius: 50%; font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 5;
   }
   .stack-cards { display: flex; flex-direction: column; gap: 16px; }
   .wide-card {
@@ -101,7 +106,8 @@
     width: 100%; padding: 14px; border: none; border-radius: 16px;
     background: linear-gradient(90deg, #3b82f6, #8b5cf6); color: #fff; font-size: 1rem; font-weight: 700; cursor: pointer; margin-top: 8px;
   }
-  .q-block { background: rgba(15, 23, 42, 0.65); border: 1px solid var(--glass-border); border-radius: 18px; padding: 16px; margin-bottom: 16px; }
+  .btn-danger { background: linear-gradient(90deg, #ef4444, #dc2626) !important; }
+  .q-block { background: rgba(15, 23, 42, 0.65); border: 1px solid var(--glass-border); border-radius: 18px; padding: 16px; margin-bottom: 16px; position: relative; }
   .q-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
   .pts-input { width: 75px; background: rgba(255, 255, 255, 0.1); border: 1px solid var(--neon-purple); border-radius: 10px; padding: 6px 8px; color: #fff; text-align: center; font-weight: 700; }
   .option-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
@@ -274,7 +280,7 @@
   <!-- VIEW 6 -->
   <section id="viewExamCreator" class="hidden">
     <div class="sub-header">
-      <h2>Créer un quiz</h2>
+      <h2 id="creatorHeaderTitle">Créer un quiz</h2>
       <button class="btn-glass" onclick="openProfClassHub()">← Retour</button>
     </div>
     <div class="input-group">
@@ -283,8 +289,8 @@
     </div>
     <div id="questionsBuilderContainer"></div>
     <button class="btn-glass" style="width:100%; margin-bottom:14px; border-style:dashed;" onclick="addQuestionBlock()">+ Ajouter une question</button>
-    <div style="display:grid; grid-template-columns: 1.4fr 1fr; gap:10px;">
-      <button class="btn-primary-gradient" style="margin-top:0;" onclick="saveAndActivateExam()">Enregistrer l'examen</button>
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+      <button class="btn-primary-gradient" style="margin-top:0;" onclick="saveAndActivateExam()">Enregistrer</button>
       <button class="btn-glass" onclick="shareCurrentExamLink()">📤 Partager</button>
     </div>
   </section>
@@ -293,8 +299,8 @@
   <section id="viewArchives" class="hidden">
     <div class="sub-header">
       <div>
-        <h2>Évaluation</h2>
-        <p style="font-size:0.8rem; color:var(--text-muted);" id="archiveSubTitle">Archives de la classe</p>
+        <h2>Évaluations & Archives</h2>
+        <p style="font-size:0.8rem; color:var(--text-muted);" id="archiveSubTitle">Classe : </p>
       </div>
       <button class="btn-glass" onclick="openProfClassHub()">← Retour</button>
     </div>
@@ -369,7 +375,7 @@
               <td id="repCat1">0</td>
               <td id="repCat2">0</td>
               <td id="repCat3">0</td>
-              <td id="repCat4">0</td>
+           <td id="repCat4">0</td>
               <td id="repMoyenne">-</td>
               <td id="repSuccessRate">-</td>
             </tr>
@@ -463,6 +469,7 @@
   let currentClass = "";
   let currentStudent = null;
   let activeExamObj = null;
+  let editingExamId = null; // تتبع الامتحان الجاري تعديله
   let selectedReportExamId = null;
   let studentAnswers = {};
 
@@ -553,7 +560,7 @@
       const card = document.createElement("div");
       card.className = "square-card" + (idx === 0 ? " blue-glow" : "");
       card.innerHTML = `
-        ${isProfMode && list.length > 1 ? `<button class="btn-delete-mini" onclick="deleteLevel(event, '${lvl}')">✕</button>` : ""}
+        ${isProfMode && list.length > 1 ? `<button class="btn-delete-mini btn-danger" onclick="deleteLevel(event, '${lvl}')" title="Supprimer niveau">✕</button>` : ""}
         <div class="card-icon">${mathIcons[idx % mathIcons.length]}</div>
         <div class="card-title">${lvl}</div>
         <div class="card-sub">Niveau Collège</div>
@@ -584,7 +591,7 @@
 
   async function deleteLevel(e, lvl) {
     e.stopPropagation();
-    if (confirm("Supprimer le niveau " + lvl + " ?")) {
+    if (confirm("Supprimer le niveau " + lvl + " et tout son contenu ?")) {
       appDB.levels = appDB.levels.filter(l => l !== lvl);
       if (appDB.classes) delete appDB.classes[lvl];
       await saveDB();
@@ -651,7 +658,7 @@
       const card = document.createElement("div");
       card.className = "square-card";
       card.innerHTML = `
-        ${isProfMode ? `<button class="btn-delete-mini" onclick="deleteClass(event, '${cls}')">✕</button>` : ""}
+        ${isProfMode ? `<button class="btn-delete-mini btn-danger" onclick="deleteClass(event, '${cls}')" title="Supprimer classe">✕</button>` : ""}
         <div class="card-icon">${mathIcons[idx % mathIcons.length]}</div>
         <div class="card-title">${cls}</div>
       `;
@@ -707,7 +714,6 @@
     const count = (appDB.students[currentClass] || []).length;
     document.getElementById("excelCountStatus").innerText = `${count} élève(s) enregistré(s)`;
   }
-
   async function handleExcelUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -742,45 +748,80 @@
   }
 
   let questionCounter = 0;
-  function openExamCreator() {
+  
+  // فتح منشئ الامتحانات (جديد أو تعديل)
+  function openExamCreator(existingExam = null) {
     hideAllViews();
     document.getElementById("viewExamCreator").classList.remove("hidden");
-    document.getElementById("examTitleInput").value = "";
     document.getElementById("questionsBuilderContainer").innerHTML = "";
     questionCounter = 0;
-    addQuestionBlock();
+
+    if (existingExam) {
+      editingExamId = existingExam.id;
+      document.getElementById("creatorHeaderTitle").innerText = "Modifier l'évaluation";
+      document.getElementById("examTitleInput").value = existingExam.title || "";
+      
+      if (existingExam.questions && existingExam.questions.length > 0) {
+        existingExam.questions.forEach(q => {
+          addQuestionBlock(q);
+        });
+      } else {
+        addQuestionBlock();
+      }
+    } else {
+      editingExamId = null;
+      document.getElementById("creatorHeaderTitle").innerText = "Créer un quiz";
+      document.getElementById("examTitleInput").value = "";
+      addQuestionBlock();
+    }
   }
-  function addQuestionBlock() {
+
+  // إضافة سؤال (مع دعم البيانات عند التعديل)
+  function addQuestionBlock(qData = null) {
     questionCounter++;
     const qId = questionCounter;
     const container = document.getElementById("questionsBuilderContainer");
     const div = document.createElement("div");
     div.className = "q-block";
     div.id = `qBlock_${qId}`;
+    
+    const textVal = qData ? qData.text : "";
+    const ptsVal = qData ? qData.pts : 2;
+    const imgVal = qData ? qData.img : "";
+    const opts = qData ? qData.options : ["", "", "", ""];
+    const correctIdx = qData ? qData.correct : 0;
+
     div.innerHTML = `
+      <button type="button" class="btn-delete-mini btn-danger" style="top:12px; right:12px;" onclick="removeQuestionBlock(${qId})" title="Supprimer question">✕</button>
       <div class="q-header">
         <span style="font-weight:700; color:#c084fc;">Question ${qId}</span>
         <div style="display:flex; align-items:center; gap:6px;">
           <span style="font-size:0.8rem;">Points:</span>
-          <input type="number" step="0.5" value="2" class="pts-input q-pts">
+          <input type="number" step="0.5" value="${ptsVal}" class="pts-input q-pts">
         </div>
       </div>
-      <textarea class="glass-input q-text" rows="2" placeholder="Énoncé..."></textarea>
+      <textarea class="glass-input q-text" rows="2" placeholder="Énoncé...">${textVal}</textarea>
       <label class="img-upload-label">
         📷 Téléverser une image (optionnel)
         <input type="file" accept="image/*" style="display:none;" onchange="previewQuestionImage(event, ${qId})">
-        <img id="qImgPreview_${qId}" class="preview-img hidden" />
+        <img id="qImgPreview_${qId}" class="preview-img ${imgVal ? '' : 'hidden'}" src="${imgVal}" />
       </label>
       <div style="margin-top:8px;">
         ${[0, 1, 2, 3].map(optIdx => `
           <div class="option-row">
-            <input type="radio" name="correct_${qId}" value="${optIdx}" ${optIdx === 0 ? "checked" : ""}>
-            <input type="text" class="glass-input q-opt" placeholder="Option ${String.fromCharCode(65 + optIdx)}">
+            <input type="radio" name="correct_${qId}" value="${optIdx}" ${optIdx === correctIdx ? "checked" : ""}>
+            <input type="text" class="glass-input q-opt" value="${opts[optIdx] || ''}" placeholder="Option ${String.fromCharCode(65 + optIdx)}">
           </div>
         `).join("")}
       </div>
     `;
     container.appendChild(div);
+  }
+
+  // مسح سؤال معين أثناء الإنشاء/التعديل
+  function removeQuestionBlock(qId) {
+    const block = document.getElementById(`qBlock_${qId}`);
+    if (block) block.remove();
   }
 
   function previewQuestionImage(event, qId) {
@@ -797,6 +838,7 @@
     reader.readAsDataURL(file);
   }
 
+  // حفظ أو تحديث الامتحان
   async function saveAndActivateExam() {
     const titleInput = document.getElementById("examTitleInput");
     const title = titleInput ? titleInput.value.trim() : "";
@@ -821,27 +863,30 @@
 
     if (!appDB.exams) appDB.exams = {};
     if (!appDB.exams[currentClass]) appDB.exams[currentClass] = [];
-    appDB.exams[currentClass].forEach(ex => ex.active = false);
 
-    const newExam = {
-      id: "exam_" + Date.now(),
-      title: title,
-      date: new Date().toLocaleDateString("fr-FR"),
-      active: true,
-      questions: questions,
-      results: {}
-    };
-
-    appDB.exams[currentClass].push(newExam);
+    if (editingExamId) {
+      // تعديل امتحان موجود مسبقاً
+      const existingExam = appDB.exams[currentClass].find(ex => ex.id === editingExamId);
+      if (existingExam) {
+        existingExam.title = title;
+        existingExam.questions = questions;
+      }
+    } else {
+      // إنشاء امتحان جديد
+      appDB.exams[currentClass].forEach(ex => ex.active = false);
+      const newExam = {
+        id: "exam_" + Date.now(),
+        title: title,
+        date: new Date().toLocaleDateString("fr-FR"),
+        active: true,
+        questions: questions,
+        results: {}
+      };
+      appDB.exams[currentClass].push(newExam);
+    }
     
-    // الحفظ المحلي الفوري لضمان استجابة الزر
-    localStorage.setItem("mathPlatformLocalDB", JSON.stringify(appDB));
-    
-    // محاولة الحفظ في الخلفية دون تعطيل الزر
-    saveDB().catch(err => console.log("Cloud sync error:", err));
-    
-    const successModal = document.getElementById("successModal");
-    if (successModal) successModal.classList.remove("hidden");
+    await saveDB();
+    document.getElementById("successModal").classList.remove("hidden");
   }
 
   function shareCurrentExamLink() {
@@ -958,6 +1003,7 @@
     if (scoreDisp) scoreDisp.innerText = `${finalOutOf20} / 20`;
   }
 
+  // عرض الأرشيف مع أزرار التعديل والحذف لكل امتحان
   async function openExamArchives() {
     await loadDataFromCloud();
     hideAllViews();
@@ -982,13 +1028,35 @@
       const card = document.createElement("div");
       card.className = "square-card";
       card.innerHTML = `
-        <div class="card-icon">${mathIcons[idx % mathIcons.length]}</div>
-        <div class="card-title" style="font-size:0.98rem;">${ex.title}</div>
+        <button class="btn-edit-mini" onclick="editExamFromArchive(event, '${ex.id}')" title="Modifier l'examen">✏️</button>
+        <button class="btn-delete-mini btn-danger" onclick="deleteExamFromArchive(event, '${ex.id}')" title="Supprimer l'examen">✕</button>
+        <div class="card-icon" style="margin-top:10px;">${mathIcons[idx % mathIcons.length]}</div>
+        <div class="card-title" style="font-size:0.95rem;">${ex.title}</div>
         <div class="card-sub">${ex.date} &bull; ${presCount}/${totalCount} Présents</div>
       `;
       card.onclick = () => openIndependentReport(ex.id);
       grid.appendChild(card);
     });
+  }
+
+  // تعديل الامتحان من الأرشيف
+  function editExamFromArchive(e, examId) {
+    e.stopPropagation();
+    const exams = appDB.exams[currentClass] || [];
+    const exam = exams.find(ex => ex.id === examId);
+    if (exam) {
+      openExamCreator(exam);
+    }
+  }
+
+  // حذف امتحان من الأرشيف
+  async function deleteExamFromArchive(e, examId) {
+    e.stopPropagation();
+    if (confirm("Voulez-vous vraiment supprimer cette évaluation et ses résultats ?")) {
+      appDB.exams[currentClass] = appDB.exams[currentClass].filter(ex => ex.id !== examId);
+      await saveDB();
+      openExamArchives();
+    }
   }
 
   async function openIndependentReport(examId) {
@@ -1107,7 +1175,7 @@
     if (!exam) return;
     const roster = (appDB.students && appDB.students[currentClass]) || [];
     const resultsMap = exam.results || {};
-    const rows = [["Code Secret", "Nom Complet", "Note / 20"]];
+    rows = [["Code Secret", "Nom Complet", "Note / 20"]];
     const allCodes = roster.length > 0 ? roster : Object.keys(resultsMap).map(p => ({ pin: p, name: resultsMap[p].name }));
     allCodes.forEach(st => {
       const res = resultsMap[st.pin];
