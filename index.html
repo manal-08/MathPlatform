@@ -78,12 +78,12 @@
   .card-title { font-size: 1.15rem; font-weight: 700; color: #fff; }
   .card-sub { font-size: 0.78rem; color: var(--text-muted); margin-top: 6px; }
   .btn-delete-mini {
-    position: absolute; top: 10px; right: 10px; background: rgba(239, 68, 68, 0.2);
-    border: 1px solid rgba(239, 68, 68, 0.4); color: #fca5a5; width: 28px; height: 28px; border-radius: 50%; font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 5;
+    position: absolute; top: 10px; right: 10px; background: rgba(239, 68, 68, 0.25);
+    border: 1px solid rgba(239, 68, 68, 0.5); color: #fca5a5; width: 30px; height: 30px; border-radius: 50%; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 10;
   }
   .btn-edit-mini {
-    position: absolute; top: 10px; left: 10px; background: rgba(59, 130, 246, 0.2);
-    border: 1px solid rgba(59, 130, 246, 0.4); color: #93c5fd; width: 28px; height: 28px; border-radius: 50%; font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 5;
+    position: absolute; top: 10px; left: 10px; background: rgba(59, 130, 246, 0.25);
+    border: 1px solid rgba(59, 130, 246, 0.5); color: #93c5fd; width: 30px; height: 30px; border-radius: 50%; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 10;
   }
   .stack-cards { display: flex; flex-direction: column; gap: 16px; }
   .wide-card {
@@ -375,7 +375,7 @@
               <td id="repCat1">0</td>
               <td id="repCat2">0</td>
               <td id="repCat3">0</td>
-           <td id="repCat4">0</td>
+    <td id="repCat4">0</td>
               <td id="repMoyenne">-</td>
               <td id="repSuccessRate">-</td>
             </tr>
@@ -469,7 +469,7 @@
   let currentClass = "";
   let currentStudent = null;
   let activeExamObj = null;
-  let editingExamId = null; // تتبع الامتحان الجاري تعديله
+  let editingExamId = null; 
   let selectedReportExamId = null;
   let studentAnswers = {};
 
@@ -714,6 +714,7 @@
     const count = (appDB.students[currentClass] || []).length;
     document.getElementById("excelCountStatus").innerText = `${count} élève(s) enregistré(s)`;
   }
+
   async function handleExcelUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -749,7 +750,6 @@
 
   let questionCounter = 0;
   
-  // فتح منشئ الامتحانات (جديد أو تعديل)
   function openExamCreator(existingExam = null) {
     hideAllViews();
     document.getElementById("viewExamCreator").classList.remove("hidden");
@@ -775,8 +775,6 @@
       addQuestionBlock();
     }
   }
-
-  // إضافة سؤال (مع دعم البيانات عند التعديل)
   function addQuestionBlock(qData = null) {
     questionCounter++;
     const qId = questionCounter;
@@ -818,7 +816,6 @@
     container.appendChild(div);
   }
 
-  // مسح سؤال معين أثناء الإنشاء/التعديل
   function removeQuestionBlock(qId) {
     const block = document.getElementById(`qBlock_${qId}`);
     if (block) block.remove();
@@ -838,7 +835,6 @@
     reader.readAsDataURL(file);
   }
 
-  // حفظ أو تحديث الامتحان
   async function saveAndActivateExam() {
     const titleInput = document.getElementById("examTitleInput");
     const title = titleInput ? titleInput.value.trim() : "";
@@ -865,14 +861,12 @@
     if (!appDB.exams[currentClass]) appDB.exams[currentClass] = [];
 
     if (editingExamId) {
-      // تعديل امتحان موجود مسبقاً
       const existingExam = appDB.exams[currentClass].find(ex => ex.id === editingExamId);
       if (existingExam) {
         existingExam.title = title;
         existingExam.questions = questions;
       }
     } else {
-      // إنشاء امتحان جديد
       appDB.exams[currentClass].forEach(ex => ex.active = false);
       const newExam = {
         id: "exam_" + Date.now(),
@@ -1003,7 +997,6 @@
     if (scoreDisp) scoreDisp.innerText = `${finalOutOf20} / 20`;
   }
 
-  // عرض الأرشيف مع أزرار التعديل والحذف لكل امتحان
   async function openExamArchives() {
     await loadDataFromCloud();
     hideAllViews();
@@ -1027,6 +1020,8 @@
       const totalCount = ((appDB.students && appDB.students[currentClass]) || []).length;
       const card = document.createElement("div");
       card.className = "square-card";
+      
+      // أزرار التعديل والحذف تظهر مباشرة داخل الأرشيف
       card.innerHTML = `
         <button class="btn-edit-mini" onclick="editExamFromArchive(event, '${ex.id}')" title="Modifier l'examen">✏️</button>
         <button class="btn-delete-mini btn-danger" onclick="deleteExamFromArchive(event, '${ex.id}')" title="Supprimer l'examen">✕</button>
@@ -1039,7 +1034,6 @@
     });
   }
 
-  // تعديل الامتحان من الأرشيف
   function editExamFromArchive(e, examId) {
     e.stopPropagation();
     const exams = appDB.exams[currentClass] || [];
@@ -1049,7 +1043,6 @@
     }
   }
 
-  // حذف امتحان من الأرشيف
   async function deleteExamFromArchive(e, examId) {
     e.stopPropagation();
     if (confirm("Voulez-vous vraiment supprimer cette évaluation et ses résultats ?")) {
@@ -1175,7 +1168,7 @@
     if (!exam) return;
     const roster = (appDB.students && appDB.students[currentClass]) || [];
     const resultsMap = exam.results || {};
-    rows = [["Code Secret", "Nom Complet", "Note / 20"]];
+    const rows = [["Code Secret", "Nom Complet", "Note / 20"]];
     const allCodes = roster.length > 0 ? roster : Object.keys(resultsMap).map(p => ({ pin: p, name: resultsMap[p].name }));
     allCodes.forEach(st => {
       const res = resultsMap[st.pin];
