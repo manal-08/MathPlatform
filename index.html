@@ -379,7 +379,7 @@
           <path d="M0,45 C160,75 340,15 500,30 L500,70 L0,70 Z" fill="#a855f7" opacity="0.45"/>
           <path d="M0,60 C180,80 360,35 500,45 L500,70 L0,70 Z" fill="#6b21a8" opacity="0.9"/>
         </svg>
-    </div>
+      </div>
     </div>
 
     <div id="tabListContent" class="hidden no-print">
@@ -482,9 +482,11 @@
       const docRef = window.FB_Doc(window.FB_DB, "platformData", "mainStore");
       const docSnap = await window.FB_GetDoc(docRef);
       if (docSnap.exists()) {
-        appDB = docSnap.data();
-        if (!appDB.levels) appDB.levels = ["1APIC", "2APIC"];
-        localStorage.setItem("mathPlatformLocalDB", JSON.stringify(appDB));
+        const cloudData = docSnap.data();
+        if (cloudData && cloudData.levels) {
+          appDB = cloudData;
+          localStorage.setItem("mathPlatformLocalDB", JSON.stringify(appDB));
+        }
       }
     } catch (e) {
       console.log("Using local offline fallback data.");
@@ -525,13 +527,17 @@
   function hideAllViews() {
     ["viewHome", "viewClasses", "viewStudentLogin", "viewStudentExam",
      "viewProfClassHub", "viewExamCreator", "viewArchives", "viewExamReportFile"]
-      .forEach(id => document.getElementById(id).classList.add("hidden"));
+      .forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.add("hidden");
+      });
   }
 
   function goHome() {
     hideAllViews();
     document.getElementById("viewHome").classList.remove("hidden");
-    document.getElementById("btnAddLevel").classList.toggle("hidden", !isProfMode);
+    const btnLvl = document.getElementById("btnAddLevel");
+    if (btnLvl) btnLvl.classList.toggle("hidden", !isProfMode);
     renderLevelsGrid();
   }
 
@@ -566,6 +572,7 @@
     const name = document.getElementById("newLevelNameInput").value.trim().toUpperCase();
     if (!name) return;
     if (!appDB.levels) appDB.levels = ["1APIC", "2APIC"];
+    if (!appDB.classes) appDB.classes = {};
     if (!appDB.levels.includes(name)) {
       appDB.levels.push(name);
       if (!appDB.classes[name]) appDB.classes[name] = [];
@@ -579,7 +586,7 @@
     e.stopPropagation();
     if (confirm("Supprimer le niveau " + lvl + " ?")) {
       appDB.levels = appDB.levels.filter(l => l !== lvl);
-      delete appDB.classes[lvl];
+      if (appDB.classes) delete appDB.classes[lvl];
       await saveDB();
       renderLevelsGrid();
     }
@@ -627,7 +634,8 @@
     hideAllViews();
     document.getElementById("viewClasses").classList.remove("hidden");
     document.getElementById("classesLevelTitle").innerText = "Classe - " + lvl;
-    document.getElementById("btnAddClass").classList.toggle("hidden", !isProfMode);
+    const btnCls = document.getElementById("btnAddClass");
+    if (btnCls) btnCls.classList.toggle("hidden", !isProfMode);
     renderClassesGrid();
   }
 
@@ -635,7 +643,9 @@
 
   function renderClassesGrid() {
     const grid = document.getElementById("classesGrid");
+    if (!grid) return;
     grid.innerHTML = "";
+    if (!appDB.classes) appDB.classes = {};
     const list = appDB.classes[currentLevel] || [];
     list.forEach((cls, idx) => {
       const card = document.createElement("div");
@@ -658,6 +668,7 @@
   async function confirmAddClass() {
     const name = document.getElementById("newClassNameInput").value.trim().toUpperCase();
     if (!name) return;
+    if (!appDB.classes) appDB.classes = {};
     if (!appDB.classes[currentLevel]) appDB.classes[currentLevel] = [];
     if (!appDB.classes[currentLevel].includes(name)) {
       appDB.classes[currentLevel].push(name);
@@ -670,11 +681,14 @@
   async function deleteClass(e, cls) {
     e.stopPropagation();
     if (confirm("Supprimer la classe " + cls + " ?")) {
-      appDB.classes[currentLevel] = appDB.classes[currentLevel].filter(c => c !== cls);
-      await saveDB();
-      renderClassesGrid();
+      if (appDB.classes && appDB.classes[currentLevel]) {
+        appDB.classes[currentLevel] = appDB.classes[currentLevel].filter(c => c !== cls);
+        await saveDB();
+        renderClassesGrid();
+      }
     }
   }
+
   function openClassTarget(cls) {
     currentClass = cls;
     if (isProfMode) { openProfClassHub(); }
@@ -689,7 +703,8 @@
     hideAllViews();
     document.getElementById("viewProfClassHub").classList.remove("hidden");
     document.getElementById("profHubClassTitle").innerText = currentClass;
-    const count = (appDB.students && appDB.students[currentClass] || []).length;
+    if (!appDB.students) appDB.students = {};
+    const count = (appDB.students[currentClass] || []).length;
     document.getElementById("excelCountStatus").innerText = `${count} élève(s) enregistré(s)`;
   }
 
@@ -698,26 +713,30 @@
     if (!file) return;
     const reader = new FileReader();
     reader.onload = async function(e) {
-      const data = new Uint8Array(e.target.result);
-      const workbook = XLSX.read(data, { type: "array" });
-      const sheet = workbook.Sheets[workbook.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-      const parsedStudents = [];
-      rows.forEach((row, index) => {
-        if (!row || row.length === 0) return;
-        const cell0 = String(row[0] || "").trim();
-        const cell1 = String(row[1] || "").trim();
-        if (index === 0 && (cell0.toLowerCase().includes("code") || cell0.toLowerCase().includes("nom"))) return;
-        if (cell0 && cell1) parsedStudents.push({ pin: cell0, name: cell1 });
-        else if (cell0) parsedStudents.push({ pin: cell0, name: "Élève " + cell0 });
-      });
-      if (parsedStudents.length > 0) {
-        if (!appDB.students) appDB.students = {};
-        appDB.students[currentClass] = parsedStudents;
-        await saveDB();
-        document.getElementById("excelCountStatus").innerText = `${parsedStudents.length} élève(s) enregistré(s)`;
-        alert(`✅ ${parsedStudents.length} codes importés avec succès !`);
-      } else { alert("Aucune donnée valide trouvée."); }
+      try {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: "array" });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+        const parsedStudents = [];
+        rows.forEach((row, index) => {
+          if (!row || row.length === 0) return;
+          const cell0 = String(row[0] || "").trim();
+          const cell1 = String(row[1] || "").trim();
+          if (index === 0 && (cell0.toLowerCase().includes("code") || cell0.toLowerCase().includes("nom"))) return;
+          if (cell0 && cell1) parsedStudents.push({ pin: cell0, name: cell1 });
+          else if (cell0) parsedStudents.push({ pin: cell0, name: "Élève " + cell0 });
+        });
+        if (parsedStudents.length > 0) {
+          if (!appDB.students) appDB.students = {};
+          appDB.students[currentClass] = parsedStudents;
+          await saveDB();
+          document.getElementById("excelCountStatus").innerText = `${parsedStudents.length} élève(s) enregistré(s)`;
+          alert(`✅ ${parsedStudents.length} codes importés avec succès !`);
+        } else { alert("Aucune donnée valide trouvée."); }
+      } catch (err) {
+        alert("Erreur lors de la lecture du fichier Excel.");
+      }
     };
     reader.readAsArrayBuffer(file);
   }
@@ -731,7 +750,6 @@
     questionCounter = 0;
     addQuestionBlock();
   }
-
   function addQuestionBlock() {
     questionCounter++;
     const qId = questionCounter;
@@ -771,20 +789,26 @@
     const reader = new FileReader();
     reader.onload = function(e) {
       const img = document.getElementById(`qImgPreview_${qId}`);
-      img.src = e.target.result;
-      img.classList.remove("hidden");
+      if (img) {
+        img.src = e.target.result;
+        img.classList.remove("hidden");
+      }
     };
     reader.readAsDataURL(file);
   }
 
   async function saveAndActivateExam() {
-    const title = document.getElementById("examTitleInput").value.trim();
+    const titleInput = document.getElementById("examTitleInput");
+    const title = titleInput ? titleInput.value.trim() : "";
     if (!title) { alert("Saisissez le titre de l'examen."); return; }
+    
     const blocks = document.querySelectorAll(".q-block");
     const questions = [];
     blocks.forEach(b => {
-      const text = b.querySelector(".q-text").value.trim();
-      const pts = parseFloat(b.querySelector(".q-pts").value) || 1;
+      const textEl = b.querySelector(".q-text");
+      const ptsEl = b.querySelector(".q-pts");
+      const text = textEl ? textEl.value.trim() : "";
+      const pts = ptsEl ? (parseFloat(ptsEl.value) || 1) : 1;
       const imgEl = b.querySelector(".preview-img");
       const imgSrc = imgEl && !imgEl.classList.contains("hidden") ? imgEl.src : "";
       const opts = Array.from(b.querySelectorAll(".q-opt")).map(i => i.value.trim());
@@ -792,6 +816,7 @@
       const correctIdx = correctRadio ? parseInt(correctRadio.value) : 0;
       if (text || imgSrc) questions.push({ text, pts, img: imgSrc, options: opts, correct: correctIdx });
     });
+    
     if (questions.length === 0) { alert("Ajoutez au moins une question."); return; }
 
     if (!appDB.exams) appDB.exams = {};
@@ -809,19 +834,28 @@
 
     appDB.exams[currentClass].push(newExam);
     
-    await saveDB();
-    document.getElementById("successModal").classList.remove("hidden");
+    // الحفظ المحلي الفوري لضمان استجابة الزر
+    localStorage.setItem("mathPlatformLocalDB", JSON.stringify(appDB));
+    
+    // محاولة الحفظ في الخلفية دون تعطيل الزر
+    saveDB().catch(err => console.log("Cloud sync error:", err));
+    
+    const successModal = document.getElementById("successModal");
+    if (successModal) successModal.classList.remove("hidden");
   }
 
   function shareCurrentExamLink() {
     const baseUrl = window.location.href.split("?")[0];
     const directUrl = `${baseUrl}?level=${encodeURIComponent(currentLevel)}&class=${encodeURIComponent(currentClass)}`;
-    document.getElementById("shareUrlBox").value = directUrl;
-    document.getElementById("shareModal").classList.remove("hidden");
+    const urlBox = document.getElementById("shareUrlBox");
+    if (urlBox) urlBox.value = directUrl;
+    const shareModal = document.getElementById("shareModal");
+    if (shareModal) shareModal.classList.remove("hidden");
   }
 
   function copyShareLink() {
     const input = document.getElementById("shareUrlBox");
+    if (!input) return;
     input.select();
     navigator.clipboard.writeText(input.value);
     alert("Lien copié !");
@@ -829,8 +863,10 @@
 
   async function verifyStudentLogin() {
     await loadDataFromCloud();
-    const name = document.getElementById("stuNameInput").value.trim();
-    const pin = document.getElementById("stuPinInput").value.trim();
+    const nameEl = document.getElementById("stuNameInput");
+    const pinEl = document.getElementById("stuPinInput");
+    const name = nameEl ? nameEl.value.trim() : "";
+    const pin = pinEl ? pinEl.value.trim() : "";
     if (!name || !pin) { alert("Remplissez tous les champs."); return; }
 
     const roster = (appDB.students && appDB.students[currentClass]) || [];
@@ -861,6 +897,7 @@
 
     studentAnswers = {};
     const list = document.getElementById("studentQuestionsList");
+    if (!list) return;
     list.innerHTML = "";
 
     activeExamObj.questions.forEach((q, qIdx) => {
@@ -911,19 +948,26 @@
       await saveDB();
     }
 
-    document.getElementById("studentQuestionsList").innerHTML = "";
-    document.getElementById("btnSubmitExam").classList.add("hidden");
-    document.getElementById("studentScoreCard").classList.remove("hidden");
-    document.getElementById("finalScoreDisplay").innerText = `${finalOutOf20} / 20`;
+    const qList = document.getElementById("studentQuestionsList");
+    if (qList) qList.innerHTML = "";
+    const subBtn = document.getElementById("btnSubmitExam");
+    if (subBtn) subBtn.classList.add("hidden");
+    const scoreCard = document.getElementById("studentScoreCard");
+    if (scoreCard) scoreCard.classList.remove("hidden");
+    const scoreDisp = document.getElementById("finalScoreDisplay");
+    if (scoreDisp) scoreDisp.innerText = `${finalOutOf20} / 20`;
   }
 
   async function openExamArchives() {
     await loadDataFromCloud();
     hideAllViews();
-    document.getElementById("viewArchives").classList.remove("hidden");
-    document.getElementById("archiveSubTitle").innerText = `Classe : ${currentClass}`;
+    const viewArch = document.getElementById("viewArchives");
+    if (viewArch) viewArch.classList.remove("hidden");
+    const subTitle = document.getElementById("archiveSubTitle");
+    if (subTitle) subTitle.innerText = `Classe : ${currentClass}`;
 
     const grid = document.getElementById("archivesGrid");
+    if (!grid) return;
     grid.innerHTML = "";
     const exams = (appDB.exams && appDB.exams[currentClass]) || [];
 
@@ -955,15 +999,24 @@
     if (!exam) return;
 
     hideAllViews();
-    document.getElementById("viewExamReportFile").classList.remove("hidden");
-    document.getElementById("reportHeaderExamName").innerText = exam.title;
-    document.getElementById("reportHeaderClassName").innerText = currentClass;
+    const reportFile = document.getElementById("viewExamReportFile");
+    if (reportFile) reportFile.classList.remove("hidden");
+    
+    const rName = document.getElementById("reportHeaderExamName");
+    if (rName) rName.innerText = exam.title;
+    const rClass = document.getElementById("reportHeaderClassName");
+    if (rClass) rClass.innerText = currentClass;
 
-    document.getElementById("repBannerText").innerText = `RAPPORT D'ÉVALUATION SUR : ${exam.title}`;
-    document.getElementById("repNiveau").innerText = currentLevel;
-    document.getElementById("repClasse").innerText = currentClass;
-    document.getElementById("repT1Name").innerText = exam.title;
-    document.getElementById("repT2Name").innerText = exam.title;
+    const bannerText = document.getElementById("repBannerText");
+    if (bannerText) bannerText.innerText = `RAPPORT D'ÉVALUATION SUR : ${exam.title}`;
+    const repNiv = document.getElementById("repNiveau");
+    if (repNiv) repNiv.innerText = currentLevel;
+    const repCls = document.getElementById("repClasse");
+    if (repCls) repCls.innerText = currentClass;
+    const repT1 = document.getElementById("repT1Name");
+    if (repT1) repT1.innerText = exam.title;
+    const repT2 = document.getElementById("repT2Name");
+    if (repT2) repT2.innerText = exam.title;
 
     const roster = (appDB.students && appDB.students[currentClass]) || [];
     const resultsMap = exam.results || {};
@@ -973,9 +1026,12 @@
     const presents = scores.length;
     const absents = Math.max(0, totalEleves - presents);
 
-    document.getElementById("repTotalStu").innerText = totalEleves;
-    document.getElementById("repPresentStu").innerText = presents;
-    document.getElementById("repAbsentStu").innerText = absents;
+    const totalStuEl = document.getElementById("repTotalStu");
+    if (totalStuEl) totalStuEl.innerText = totalEleves;
+    const presentStuEl = document.getElementById("repPresentStu");
+    if (presentStuEl) presentStuEl.innerText = presents;
+    const absentStuEl = document.getElementById("repAbsentStu");
+    if (absentStuEl) absentStuEl.innerText = absents;
 
     if (presents > 0) {
       const maxN = Math.max(...scores);
@@ -987,42 +1043,62 @@
       const avg = (scores.reduce((a, b) => a + b, 0) / presents).toFixed(2);
       const passRate = (((c3 + c4) / presents) * 100).toFixed(1) + "%";
 
-      document.getElementById("repMaxNote").innerText = maxN.toFixed(2);
-      document.getElementById("repMinNote").innerText = minN.toFixed(2);
-      document.getElementById("repCat1").innerText = c1;
-      document.getElementById("repCat2").innerText = c2;
-      document.getElementById("repCat3").innerText = c3;
-      document.getElementById("repCat4").innerText = c4;
-      document.getElementById("repMoyenne").innerText = avg;
-      document.getElementById("repSuccessRate").innerText = passRate;
+      const maxNoteEl = document.getElementById("repMaxNote");
+      if (maxNoteEl) maxNoteEl.innerText = maxN.toFixed(2);
+      const minNoteEl = document.getElementById("repMinNote");
+      if (minNoteEl) minNoteEl.innerText = minN.toFixed(2);
+      const c1El = document.getElementById("repCat1");
+      if (c1El) c1El.innerText = c1;
+      const c2El = document.getElementById("repCat2");
+      if (c2El) c2El.innerText = c2;
+      const c3El = document.getElementById("repCat3");
+      if (c3El) c3El.innerText = c3;
+      const c4El = document.getElementById("repCat4");
+      if (c4El) c4El.innerText = c4;
+      const avgEl = document.getElementById("repMoyenne");
+      if (avgEl) avgEl.innerText = avg;
+      const passRateEl = document.getElementById("repSuccessRate");
+      if (passRateEl) passRateEl.innerText = passRate;
     } else {
-      ["repMaxNote", "repMinNote", "repMoyenne", "repSuccessRate"].forEach(id => document.getElementById(id).innerText = "-");
-      ["repCat1", "repCat2", "repCat3", "repCat4"].forEach(id => document.getElementById(id).innerText = "0");
+      ["repMaxNote", "repMinNote", "repMoyenne", "repSuccessRate"].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerText = "-";
+      });
+      ["repCat1", "repCat2", "repCat3", "repCat4"].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerText = "0";
+      });
     }
 
     const tbody = document.getElementById("gradesTableBody");
-    tbody.innerHTML = "";
-    const allCodes = roster.length > 0 ? roster : Object.keys(resultsMap).map(p => ({ pin: p, name: resultsMap[p].name }));
+    if (tbody) {
+      tbody.innerHTML = "";
+      const allCodes = roster.length > 0 ? roster : Object.keys(resultsMap).map(p => ({ pin: p, name: resultsMap[p].name }));
 
-    allCodes.forEach(st => {
-      const res = resultsMap[st.pin];
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>${st.pin}</td>
-        <td>${res ? res.name : st.name}</td>
-        <td>${res ? `<strong style="color:#6ee7b7;">${res.score.toFixed(2)}</strong>` : `<span style="color:#fca5a5;">Absent</span>`}</td>
-      `;
-      tbody.appendChild(tr);
-    });
+      allCodes.forEach(st => {
+        const res = resultsMap[st.pin];
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${st.pin}</td>
+          <td>${res ? res.name : st.name}</td>
+          <td>${res ? `<strong style="color:#6ee7b7;">${res.score.toFixed(2)}</strong>` : `<span style="color:#fca5a5;">Absent</span>`}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
 
     switchReportTab("report");
   }
 
   function switchReportTab(tab) {
-    document.getElementById("tabReportContent").classList.toggle("hidden", tab !== "report");
-    document.getElementById("tabListContent").classList.toggle("hidden", tab !== "list");
-    document.getElementById("segBtnReport").classList.toggle("active", tab === "report");
-    document.getElementById("segBtnList").classList.toggle("active", tab === "list");
+    const repContent = document.getElementById("tabReportContent");
+    if (repContent) repContent.classList.toggle("hidden", tab !== "report");
+    const listContent = document.getElementById("tabListContent");
+    if (listContent) listContent.classList.toggle("hidden", tab !== "list");
+    const segRep = document.getElementById("segBtnReport");
+    if (segRep) segRep.classList.toggle("active", tab === "report");
+    const segList = document.getElementById("segBtnList");
+    if (segList) segList.classList.toggle("active", tab === "list");
   }
 
   function exportGradesToExcel() {
