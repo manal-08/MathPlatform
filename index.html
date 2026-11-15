@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MATH PLATFORM - Cloud Sync</title>
+<title>MATH PLATFORM - Évaluations & Rapports</title>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
@@ -26,7 +26,7 @@
     window.FB_GetDoc = getDoc;
     window.FB_SetDoc = setDoc;
   } catch(e) {
-    console.error("Firebase init error:", e);
+    console.log("Firebase init note:", e);
   }
 
   if (window.initializeAppReady) {
@@ -375,7 +375,7 @@
     </div>
 
     <div id="tabListContent" class="hidden no-print">
-      <button class="btn-primary-gradient" style="margin-bottom: 14px;" onclick="exportGradesToExcel()">📥 Télécharger la Liste (Excel)</button>
+         <button class="btn-primary-gradient" style="margin-bottom: 14px;" onclick="exportGradesToExcel()">📥 Télécharger la Liste (Excel)</button>
       <div class="q-block">
         <table class="grades-table">
           <thead>
@@ -458,7 +458,7 @@
   let selectedReportExamId = null;
   let studentAnswers = {};
 
-  let appDB = {
+  let appDB = JSON.parse(localStorage.getItem("mathPlatformLocalDB")) || {
     levels: ["1APIC", "2APIC"],
     classes: {
       "1APIC": ["1APIC-5"],
@@ -476,28 +476,27 @@
       if (docSnap.exists()) {
         appDB = docSnap.data();
         if (!appDB.levels) appDB.levels = ["1APIC", "2APIC"];
-      } else {
-        await window.FB_SetDoc(docRef, appDB);
+        localStorage.setItem("mathPlatformLocalDB", JSON.stringify(appDB));
       }
     } catch (e) {
-      console.error("Cloud load error:", e);
+      console.log("Using local offline fallback data.");
     }
   }
 
   async function saveDB() {
+    // Save locally immediately to guarantee zero freezing
+    localStorage.setItem("mathPlatformLocalDB", JSON.stringify(appDB));
+    
+    // Try syncing with cloud in background
     try {
-      if (!window.FB_DB) {
-        alert("Erreur: Connexion Firebase non initialisée !");
-        return false;
+      if (window.FB_DB) {
+        const docRef = window.FB_Doc(window.FB_DB, "platformData", "mainStore");
+        await window.FB_SetDoc(docRef, appDB);
       }
-      const docRef = window.FB_Doc(window.FB_DB, "platformData", "mainStore");
-      await window.FB_SetDoc(docRef, appDB);
-      return true;
     } catch (e) {
-      console.error("Cloud save error:", e);
-      alert("Erreur de sauvegarde cloud : " + e.message);
-      return false;
+      console.log("Cloud sync pending:", e);
     }
+    return true;
   }
 
   window.initializeAppReady = async function() {
@@ -557,6 +556,7 @@
     document.getElementById("newLevelNameInput").value = "";
     document.getElementById("addLevelModal").classList.remove("hidden");
   }
+
   async function confirmAddLevel() {
     const name = document.getElementById("newLevelNameInput").value.trim().toUpperCase();
     if (!name) return;
@@ -616,7 +616,6 @@
     document.getElementById("successModal").classList.add("hidden");
     shareCurrentExamLink();
   }
-
   function selectLevel(lvl) {
     currentLevel = lvl;
     hideAllViews();
@@ -726,6 +725,7 @@
     questionCounter = 0;
     addQuestionBlock();
   }
+
   function addQuestionBlock() {
     questionCounter++;
     const qId = questionCounter;
@@ -772,8 +772,6 @@
   }
 
   async function saveAndActivateExam() {
-    await loadDataFromCloud();
-
     const title = document.getElementById("examTitleInput").value.trim();
     if (!title) { alert("Saisissez le titre de l'examen."); return; }
     const blocks = document.querySelectorAll(".q-block");
@@ -805,10 +803,8 @@
 
     appDB.exams[currentClass].push(newExam);
     
-    const success = await saveDB();
-    if (success) {
-      document.getElementById("successModal").classList.remove("hidden");
-    }
+    await saveDB();
+    document.getElementById("successModal").classList.remove("hidden");
   }
 
   function shareCurrentExamLink() {
