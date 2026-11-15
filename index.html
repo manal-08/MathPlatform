@@ -373,7 +373,7 @@
     </div>
 
     <div id="tabReportContent">
-      <button class="btn-primary-gradient no-print" style="background: #10b981; margin-bottom: 14px;" onclick="window.print()">🖨️ Imprimer / PDF (A4)</button>
+         <button class="btn-primary-gradient no-print" style="background: #10b981; margin-bottom: 14px;" onclick="window.print()">🖨️ Imprimer / PDF (A4)</button>
       <div class="a4-sheet">
         <svg class="wave-top" viewBox="0 0 500 60" preserveAspectRatio="none">
           <path d="M0,0 L280,0 C190,45 90,25 0,55 Z" fill="#6b21a8" opacity="0.85"/>
@@ -726,7 +726,6 @@
       shareSpecificExamLink(lastSharedExamId);
     }
   }
-
   function selectLevel(lvl) {
     currentLevel = lvl;
     hideAllViews();
@@ -905,7 +904,8 @@
     const block = document.getElementById(`qBlock_${qId}`);
     if (block) block.remove();
   }
-function previewQuestionImage(event, qId) {
+
+  function previewQuestionImage(event, qId) {
     const file = event.target.files[0];
     if (!file) return;
     const reader = new FileReader();
@@ -969,7 +969,6 @@ function previewQuestionImage(event, qId) {
     lastSharedExamId = targetExamId;
     document.getElementById("successModal").classList.remove("hidden");
   }
-
   function shareSpecificExamLink(examId) {
     const baseUrl = window.location.href.split("?")[0];
     const directUrl = `${baseUrl}?class=${encodeURIComponent(currentClass)}&examId=${encodeURIComponent(examId)}`;
@@ -1243,8 +1242,9 @@ function previewQuestionImage(event, qId) {
         const el = document.getElementById(id);
         if (el) el.innerText = "0";
       });
-  }
-     const tbody = document.getElementById("gradesTableBody");
+    }
+
+    const tbody = document.getElementById("gradesTableBody");
     if (tbody) {
       tbody.innerHTML = "";
       const allCodes = roster.length > 0 ? roster : Object.keys(resultsMap).map(p => ({ pin: p, name: resultsMap[p].name }));
