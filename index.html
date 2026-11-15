@@ -373,7 +373,7 @@
             <tr>
               <th style="width:30%;">Devoir</th>
               <th style="width:35%;">Note la plus élevée</th>
-                <th style="width:35%;">Note la plus basse</th>
+              <th style="width:35%;">Note la plus basse</th>
             </tr>
           </thead>
           <tbody>
@@ -512,10 +512,8 @@
     exams: {}
   };
 
-  // دالة ذكية لتحويل أي كسر يكتب هكذا 3/4 تلقائياً إلى كسر خط أفقي
   function formatFractions(text) {
     if (!text) return "";
-    // تبحث عن أي نص مكتوب بصيغة أقام/أرقام مثل 3/4 أو -5/2 وتحوله لخط أفقي
     return text.replace(/(-?\d+)\s*\/\s*(-?\d+)/g, function(match, numerator, denominator) {
       return `<span class="math-fraction"><span class="math-num">${numerator}</span><span class="math-den">${denominator}</span></span>`;
     });
@@ -871,11 +869,11 @@
     `;
     container.appendChild(div);
   }
-
   function removeQuestionBlock(qId) {
     const block = document.getElementById(`qBlock_${qId}`);
     if (block) block.remove();
   }
+
   function previewQuestionImage(event, qId) {
     const file = event.target.files[0];
     if (!file) return;
@@ -1213,7 +1211,7 @@
     }
 
     const tbody = document.getElementById("gradesTableBody");
-    if, (tbody) {
+    if (tbody) {
       tbody.innerHTML = "";
       const allCodes = roster.length > 0 ? roster : Object.keys(resultsMap).map(p => ({ pin: p, name: resultsMap[p].name }));
 
