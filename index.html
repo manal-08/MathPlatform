@@ -379,7 +379,7 @@
           <path d="M0,45 C160,75 340,15 500,30 L500,70 L0,70 Z" fill="#a855f7" opacity="0.45"/>
           <path d="M0,60 C180,80 360,35 500,45 L500,70 L0,70 Z" fill="#6b21a8" opacity="0.9"/>
         </svg>
-      </div>
+    </div>
     </div>
 
     <div id="tabListContent" class="hidden no-print">
@@ -675,7 +675,6 @@
       renderClassesGrid();
     }
   }
-
   function openClassTarget(cls) {
     currentClass = cls;
     if (isProfMode) { openProfClassHub(); }
@@ -690,7 +689,7 @@
     hideAllViews();
     document.getElementById("viewProfClassHub").classList.remove("hidden");
     document.getElementById("profHubClassTitle").innerText = currentClass;
-    const count = (appDB.students[currentClass] || []).length;
+    const count = (appDB.students && appDB.students[currentClass] || []).length;
     document.getElementById("excelCountStatus").innerText = `${count} élève(s) enregistré(s)`;
   }
 
@@ -713,6 +712,7 @@
         else if (cell0) parsedStudents.push({ pin: cell0, name: "Élève " + cell0 });
       });
       if (parsedStudents.length > 0) {
+        if (!appDB.students) appDB.students = {};
         appDB.students[currentClass] = parsedStudents;
         await saveDB();
         document.getElementById("excelCountStatus").innerText = `${parsedStudents.length} élève(s) enregistré(s)`;
@@ -731,6 +731,7 @@
     questionCounter = 0;
     addQuestionBlock();
   }
+
   function addQuestionBlock() {
     questionCounter++;
     const qId = questionCounter;
