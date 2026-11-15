@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MATH PLATFORM - Cloud Sync</title>
+<title>MathPlatform - Évaluez, suivez, réussissez</title>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
@@ -52,6 +52,27 @@
   }
   .app-container { max-width: 540px; margin: 0 auto; padding: 18px; }
   .hidden { display: none !important; }
+
+  /* شاشة الترحيب (Splash Screen) */
+  #splashScreen {
+    position: fixed; inset: 0; background: radial-gradient(circle at center, #1e0b46 0%, #07091e 100%);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 9999;
+    text-align: center; padding: 20px; transition: opacity 0.5s ease;
+  }
+  .splash-logo-box {
+    width: 110px; height: 110px; background: rgba(156, 66, 245, 0.15); border: 2px solid rgba(192, 132, 252, 0.4);
+    border-radius: 28px; display: flex; align-items: center; justify-content: center; margin-bottom: 22px;
+    box-shadow: 0 0 30px rgba(156, 66, 245, 0.3);
+  }
+  .splash-logo-box img { width: 70px; height: 70px; object-fit: contain; }
+  .splash-title { font-size: 2rem; font-weight: 800; color: #fff; margin-bottom: 6px; letter-spacing: 0.5px; }
+  .splash-sub { font-size: 0.95rem; color: #d8b4fe; margin-bottom: 30px; }
+  .splash-footer { position: absolute; bottom: 30px; font-size: 0.78px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+  .offline-banner {
+    background: rgba(239, 68, 68, 0.2); border: 1px solid var(--danger); color: #fca5a5;
+    padding: 10px 16px; border-radius: 12px; font-size: 0.85rem; font-weight: 700; margin-top: 15px; display: none;
+  }
+
   .brand-header {
     background: linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
     backdrop-filter: blur(14px); border: 1px solid var(--glass-border); border-radius: 22px;
@@ -144,7 +165,6 @@
   .seg-btn { padding: 11px; border: none; border-radius: 12px; background: transparent; color: var(--text-muted); font-weight: 700; font-size: 0.88rem; cursor: pointer; }
   .seg-btn.active { background: linear-gradient(90deg, #6366f1, #9333ea); color: #fff; }
 
-  /* تنسيق الكسر الرياضي الأفقي التلقائي */
   .math-fraction {
     display: inline-flex;
     flex-direction: column;
@@ -202,13 +222,25 @@
 </head>
 <body>
 
+<!-- شاشة الترحيب التي تظهر عند التشغيل وعند انقطاع الإنترنت -->
+<div id="splashScreen">
+  <div class="splash-logo-box">
+    <!-- يمكنك وضع رابط شعارك أو الأيقونة هنا -->
+    <div style="font-size: 2.8rem;">π</div>
+  </div>
+  <div class="splash-title">MathPlatform</div>
+  <div class="splash-sub">Évaluez, suivez, réussissez</div>
+  <div id="offlineAlert" class="offline-banner">⚠️ لا يتوفر إنترنت. يرجى التحقق من الاتصال بالشبكة.</div>
+  <div class="splash-footer">Pour les enseignants de mathématiques</div>
+</div>
+
 <div class="app-container">
   <header class="brand-header no-print">
     <div class="brand-left" onclick="openProfPinModal()" title="Espace Professeur">
       <div class="sigma-logo">Σ</div>
       <div class="brand-title">MATH<br>PLATFORM</div>
     </div>
-    <div id="modeIndicator" class="prof-badge" onclick="handleHeaderBadge()">Espace Élève</div>
+    <div id="modeIndicator" class="prof-badge hidden" onclick="handleHeaderBadge()"></div>
   </header>
 
   <!-- VIEW 1 -->
@@ -235,25 +267,21 @@
     <div id="classesGrid" class="grid-2"></div>
   </section>
 
-  <!-- VIEW 3 -->
+  <!-- VIEW 3 (Student Login) -->
   <section id="viewStudentLogin" class="hidden">
-    <div class="sub-header">
-      <h2 id="studentLoginClassTitle"></h2>
-      <button class="btn-glass" onclick="backToClasses()">← Classes</button>
-    </div>
-    <div class="login-glass-box">
+    <div class="login-glass-box" style="margin-top: 20px;">
       <div class="grad-cap-icon">🎓</div>
-      <h2>Bienvenue</h2>
-      <p>Connectez-vous pour commencer l'évaluation</p>
-      <div class="input-group">
+      <h2 id="studentLoginClassTitle">Évaluation</h2>
+      <p style="margin-top: 6px; font-size: 0.9rem;">Connectez-vous pour commencer l'évaluation</p>
+      <div class="input-group" style="margin-top: 18px;">
         <label>Nom complet</label>
         <input type="text" id="stuNameInput" class="glass-input" placeholder="Votre nom complet">
       </div>
       <div class="input-group">
-        <label>Code secret</label>
+        <label>Code secret (Matricule)</label>
         <input type="password" id="stuPinInput" class="glass-input" placeholder="••••••••">
       </div>
-      <button class="btn-primary-gradient" onclick="verifyStudentLogin()">Commencer ↗</button>
+      <button class="btn-primary-gradient" onclick="verifyStudentLogin()">Commencer l'examen ↗</button>
     </div>
   </section>
 
@@ -272,7 +300,6 @@
       <h2>Évaluation Terminée</h2>
       <p>Votre note finale enregistrée :</p>
       <div style="font-size: 2.6rem; font-weight: 800; color: #38bdf8; margin: 14px 0;" id="finalScoreDisplay">0 / 20</div>
-      <button class="btn-glass" onclick="goHome()">Retour à l'accueil</button>
     </div>
   </section>
 
@@ -345,7 +372,7 @@
       <button class="btn-glass" onclick="openExamArchives()">← Archives</button>
     </div>
     <div class="segmented-bar no-print">
-      <button id="segBtnReport" class="seg-btn active" onclick="switchReportTab('report')">Rapport d'évaluation</button>
+        <button id="segBtnReport" class="seg-btn active" onclick="switchReportTab('report')">Rapport d'évaluation</button>
       <button id="segBtnList" class="seg-btn" onclick="switchReportTab('list')">Liste des Notes</button>
     </div>
 
@@ -480,7 +507,6 @@
   </div>
 </div>
 
-<!-- SUCCESS ALERT MODAL -->
 <div id="successModal" class="modal-overlay hidden">
   <div class="modal-box">
     <div style="font-size:3rem; margin-bottom:10px;">✅</div>
@@ -520,6 +546,14 @@
   }
 
   async function loadDataFromCloud() {
+    // التحقق من حالة الإنترنت أولاً
+    if (!navigator.onLine) {
+      document.getElementById("offlineAlert").style.display = "block";
+      throw new Error("No internet connection");
+    } else {
+      document.getElementById("offlineAlert").style.display = "none";
+    }
+
     try {
       if (!window.FB_DB) return;
       const docRef = window.FB_Doc(window.FB_DB, "platformData", "mainStore");
@@ -537,6 +571,10 @@
   }
 
   async function saveDB() {
+    if (!navigator.onLine) {
+      alert("⚠️ لا يتوفر إنترنت. تعذر الحفظ على السحابة.");
+      return false;
+    }
     localStorage.setItem("mathPlatformLocalDB", JSON.stringify(appDB));
     try {
       if (window.FB_DB) {
@@ -550,37 +588,58 @@
   }
 
   window.initializeAppReady = async function() {
-    await loadDataFromCloud();
-    renderLevelsGrid();
+    try {
+      await loadDataFromCloud();
+    } catch (err) {
+      // إذا لم يتوفر إنترنت، سيبقى التطبيق معروضاً على شاشة الترحيب مع رسالة الخطأ ولن يتابع الفتح
+      return;
+    }
+
+    // إخفاء شاشة الترحيب بسلاسة بعد نجاح التحميل
+    const splash = document.getElementById("splashScreen");
+    if (splash) {
+      splash.style.opacity = "0";
+      setTimeout(() => splash.remove(), 500);
+    }
     
     const params = new URLSearchParams(window.location.search);
     const lvl = params.get("level");
     const cls = params.get("class");
     const exId = params.get("examId");
 
-    if (lvl && cls) {
-      currentLevel = lvl;
+    if (cls && exId) {
       currentClass = cls;
-      if (exId) {
-        const classExams = (appDB.exams && appDB.exams[cls]) || [];
-        const foundEx = classExams.find(e => e.id === exId);
-        if (foundEx) {
-          activeExamObj = foundEx;
-          hideAllViews();
-          document.getElementById("viewStudentLogin").classList.remove("hidden");
-          document.getElementById("studentLoginClassTitle").innerText = cls + " - " + foundEx.title;
-          return;
-        }
+      if (lvl) currentLevel = lvl;
+      const classExams = (appDB.exams && appDB.exams[cls]) || [];
+      const foundEx = classExams.find(e => e.id === exId);
+      if (foundEx) {
+        activeExamObj = foundEx;
+        hideAllViews();
+        document.getElementById("viewStudentLogin").classList.remove("hidden");
+        document.getElementById("studentLoginClassTitle").innerText = foundEx.title;
+        return;
       }
-      openClassTarget(cls);
     }
+
+    openProfPinModal();
   };
 
-  setTimeout(() => {
-    if (!document.getElementById("levelsGrid").hasChildNodes()) {
-      renderLevelsGrid();
+  // احتياطياً في حال التأخر بالاتصال
+  setTimeout(async () => {
+    const splash = document.getElementById("splashScreen");
+    if (splash && document.getElementById("pinModal").classList.contains("hidden") &&
+        document.getElementById("viewHome").classList.contains("hidden") &&
+        document.getElementById("viewStudentLogin").classList.contains("hidden")) {
+      try {
+        await loadDataFromCloud();
+        splash.style.opacity = "0";
+        setTimeout(() => splash.remove(), 500);
+        openProfPinModal();
+      } catch(e) {
+        // يبقى في شاشة الترحيب مع تنبيه الإنترنت
+      }
     }
-  }, 300);
+  }, 1500);
 
   function hideAllViews() {
     ["viewHome", "viewClasses", "viewStudentLogin", "viewStudentExam",
@@ -592,6 +651,10 @@
   }
 
   function goHome() {
+    if (!isProfMode) {
+      openProfPinModal();
+      return;
+    }
     hideAllViews();
     document.getElementById("viewHome").classList.remove("hidden");
     const btnLvl = document.getElementById("btnAddLevel");
@@ -651,7 +714,6 @@
   }
 
   function openProfPinModal() {
-    if (isProfMode) { goHome(); return; }
     document.getElementById("profPinInput").value = "";
     document.getElementById("pinModal").classList.remove("hidden");
   }
@@ -660,22 +722,9 @@
     const val = document.getElementById("profPinInput").value.trim();
     if (val === PROF_SECRET) {
       isProfMode = true;
-      document.getElementById("modeIndicator").innerText = "Mode Prof (Quitter)";
-      document.getElementById("modeIndicator").style.background = "rgba(16, 185, 129, 0.25)";
-      document.getElementById("modeIndicator").style.borderColor = "#10b981";
       closeModals();
       goHome();
     } else { alert("Code secret incorrect !"); }
-  }
-
-  function handleHeaderBadge() {
-    if (isProfMode) {
-      isProfMode = false;
-      document.getElementById("modeIndicator").innerText = "Espace Élève";
-      document.getElementById("modeIndicator").style.background = "";
-      document.getElementById("modeIndicator").style.borderColor = "";
-      goHome();
-    } else { openProfPinModal(); }
   }
 
   function closeModals() {
@@ -724,7 +773,6 @@
     document.getElementById("newClassNameInput").value = "";
     document.getElementById("addClassModal").classList.remove("hidden");
   }
-
   async function confirmAddClass() {
     const name = document.getElementById("newClassNameInput").value.trim().toUpperCase();
     if (!name) return;
@@ -751,12 +799,7 @@
 
   function openClassTarget(cls) {
     currentClass = cls;
-    if (isProfMode) { openProfClassHub(); }
-    else {
-      hideAllViews();
-      document.getElementById("viewStudentLogin").classList.remove("hidden");
-      document.getElementById("studentLoginClassTitle").innerText = cls;
-    }
+    openProfClassHub();
   }
 
   function openProfClassHub() {
@@ -869,6 +912,7 @@
     `;
     container.appendChild(div);
   }
+
   function removeQuestionBlock(qId) {
     const block = document.getElementById(`qBlock_${qId}`);
     if (block) block.remove();
@@ -941,7 +985,7 @@
 
   function shareSpecificExamLink(examId) {
     const baseUrl = window.location.href.split("?")[0];
-    const directUrl = `${baseUrl}?level=${encodeURIComponent(currentLevel)}&class=${encodeURIComponent(currentClass)}&examId=${encodeURIComponent(examId)}`;
+    const directUrl = `${baseUrl}?class=${encodeURIComponent(currentClass)}&examId=${encodeURIComponent(examId)}`;
     const urlBox = document.getElementById("shareUrlBox");
     if (urlBox) urlBox.value = directUrl;
     const shareModal = document.getElementById("shareModal");
@@ -957,7 +1001,11 @@
   }
 
   async function verifyStudentLogin() {
-    await loadDataFromCloud();
+    try {
+      await loadDataFromCloud();
+    } catch(e) {
+      return;
+    }
     const nameEl = document.getElementById("stuNameInput");
     const pinEl = document.getElementById("stuPinInput");
     const name = nameEl ? nameEl.value.trim() : "";
@@ -969,7 +1017,6 @@
     if (!found) { alert("Code secret invalide."); return; }
 
     const classExams = (appDB.exams && appDB.exams[currentClass]) || [];
-    
     const params = new URLSearchParams(window.location.search);
     const exIdParam = params.get("examId");
     
@@ -977,11 +1024,8 @@
     if (exIdParam) {
       targetExam = classExams.find(ex => ex.id === exIdParam);
     }
-    if (!targetExam && activeExamObj) {
-      targetExam = activeExamObj;
-    }
     if (!targetExam) {
-      targetExam = classExams.find(ex => ex.active) || classExams[classExams.length - 1];
+      targetExam = classExams[classExams.length - 1];
     }
 
     if (!targetExam) { alert("Aucun examen disponible."); return; }
@@ -1027,7 +1071,6 @@
       list.appendChild(card);
     });
   }
-
   function selectStudentChoice(qIdx, oIdx) {
     studentAnswers[qIdx] = oIdx;
     for (let i = 0; i < 4; i++) {
@@ -1037,7 +1080,11 @@
   }
 
   async function submitStudentExam() {
-    await loadDataFromCloud();
+    try {
+      await loadDataFromCloud();
+    } catch(e) {
+      return;
+    }
     let earned = 0;
     let totalPossible = 0;
     activeExamObj.questions.forEach((q, idx) => {
