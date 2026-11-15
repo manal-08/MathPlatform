@@ -1,0 +1,1300 @@
+<!DOCTYPE html>
+<html lang="fr" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MATH PLATFORM - Évaluations & Rapports (Cloud Sync)</title>
+<!-- SheetJS for reading & exporting Excel files -->
+<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+<!-- Firebase SDKs -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+  import { getFirestore, doc, getDoc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyAh09Z4NjCUH-kXRMfzro9atYgltanD2z4",
+    authDomain: "mathplatform-abeac.firebaseapp.com",
+    projectId: "mathplatform-abeac",
+    storageBucket: "mathplatform-abeac.firebasestorage.app",
+    messagingSenderId: "776582004842",
+    appId: "1:776582004842:web:5caed196a6251069a78a13",
+    measurementId: "G-24BFCT7VCK"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  window.FB_DB = db;
+  window.FB_Doc = doc;
+  window.FB_GetDoc = getDoc;
+  window.FB_SetDoc = setDoc;
+  window.FB_UpdateDoc = updateDoc;
+
+  if (window.initializeAppReady) {
+    window.initializeAppReady();
+  }
+</script>
+
+<style>
+  :root {
+    --bg-deep: #07091e;
+    --bg-cosmic: #190d3c;
+    --neon-blue: #00a8ff;
+    --neon-purple: #9c42f5;
+    --neon-pink: #e056fd;
+    --glass: rgba(255, 255, 255, 0.06);
+    --glass-strong: rgba(255, 255, 255, 0.12);
+    --glass-border: rgba(168, 130, 255, 0.28);
+    --text-main: #ffffff;
+    --text-muted: #b8c0e0;
+    --success: #10b981;
+    --danger: #ef4444;
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  }
+
+  body {
+    background: radial-gradient(circle at 20% 20%, #2a145e 0%, var(--bg-deep) 55%, #120830 100%);
+    color: var(--text-main);
+    min-height: 100vh;
+    padding-bottom: 40px;
+    overflow-x: hidden;
+  }
+
+  body::before, body::after {
+    content: "";
+    position: fixed;
+    width: 320px;
+    height: 320px;
+    border-radius: 50%;
+    filter: blur(110px);
+    z-index: -1;
+    pointer-events: none;
+  }
+  body::before { background: rgba(156, 66, 245, 0.25); top: -60px; left: -60px; }
+  body::after { background: rgba(0, 168, 255, 0.2); bottom: -60px; right: -60px; }
+
+  .app-container {
+    max-width: 540px;
+    margin: 0 auto;
+    padding: 18px;
+  }
+
+  .hidden { display: none !important; }
+
+  .brand-header {
+    background: linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
+    backdrop-filter: blur(14px);
+    border: 1px solid var(--glass-border);
+    border-radius: 22px;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 26px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+  }
+
+  .brand-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .sigma-logo {
+    font-size: 2.3rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #38bdf8, #c084fc);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.5));
+    line-height: 1;
+  }
+
+  .brand-title {
+    font-size: 1.15rem;
+    font-weight: 800;
+    letter-spacing: 1px;
+    line-height: 1.2;
+    color: #e2e8f0;
+  }
+
+  .prof-badge {
+    background: rgba(156, 66, 245, 0.25);
+    border: 1px solid var(--neon-purple);
+    color: #e9d5ff;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .sub-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 22px;
+  }
+
+  .sub-header h2 { font-size: 1.35rem; font-weight: 700; }
+
+  .btn-glass {
+    background: var(--glass);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    color: #fff;
+    padding: 9px 15px;
+    border-radius: 14px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s;
+    box-shadow: 0 0 15px rgba(156, 66, 245, 0.15);
+  }
+
+  .btn-glass:hover { background: var(--glass-strong); border-color: var(--neon-purple); }
+
+  .grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+
+  .square-card {
+    aspect-ratio: 1 / 1;
+    background: linear-gradient(145deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
+    backdrop-filter: blur(14px);
+    border: 1.5px solid var(--glass-border);
+    border-radius: 24px;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.25s ease;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3), inset 0 0 18px rgba(156, 66, 245, 0.12);
+  }
+
+  .square-card:hover {
+    transform: translateY(-4px);
+    border-color: #c084fc;
+    box-shadow: 0 12px 30px rgba(156, 66, 245, 0.35), inset 0 0 22px rgba(0, 168, 255, 0.2);
+  }
+
+  .square-card.blue-glow {
+    border-color: rgba(56, 189, 248, 0.45);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3), inset 0 0 20px rgba(56, 189, 248, 0.15);
+  }
+
+  .card-icon { font-size: 2.2rem; margin-bottom: 12px; filter: drop-shadow(0 0 10px rgba(192, 132, 252, 0.6)); }
+  .card-title { font-size: 1.15rem; font-weight: 700; color: #fff; }
+  .card-sub { font-size: 0.78rem; color: var(--text-muted); margin-top: 6px; }
+
+  .btn-delete-mini {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(239, 68, 68, 0.2);
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    color: #fca5a5;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    font-size: 0.75rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .stack-cards { display: flex; flex-direction: column; gap: 16px; }
+
+  .wide-card {
+    background: linear-gradient(145deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03));
+    backdrop-filter: blur(14px);
+    border: 1.5px solid var(--glass-border);
+    border-radius: 22px;
+    padding: 24px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    cursor: pointer;
+    transition: 0.25s;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+  }
+
+  .wide-card:hover { border-color: #c084fc; transform: translateY(-2px); }
+
+  .login-glass-box {
+    background: linear-gradient(160deg, rgba(255,255,255,0.1), rgba(255,255,255,0.03));
+    backdrop-filter: blur(18px);
+    border: 1.5px solid rgba(255, 255, 255, 0.18);
+    border-radius: 28px;
+    padding: 32px 24px;
+    text-align: center;
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.45);
+    margin-top: 10px;
+  }
+
+  .grad-cap-icon { font-size: 2.8rem; margin-bottom: 10px; filter: drop-shadow(0 0 12px rgba(156, 66, 245, 0.7)); }
+  .login-glass-box h2 { font-size: 1.7rem; font-weight: 800; margin-bottom: 6px; }
+  .login-glass-box p { color: var(--text-muted); font-size: 0.88rem; margin-bottom: 24px; }
+
+  .input-group { text-align: left; margin-bottom: 16px; }
+  .input-group label { display: block; font-size: 0.85rem; color: #cbd5e1; margin-bottom: 6px; font-weight: 600; }
+
+  .glass-input {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 14px;
+    padding: 13px 15px;
+    color: #fff;
+    font-size: 0.95rem;
+    outline: none;
+    transition: 0.2s;
+  }
+
+  .glass-input:focus { border-color: var(--neon-blue); background: rgba(255, 255, 255, 0.12); }
+
+  .btn-primary-gradient {
+    width: 100%;
+    padding: 14px;
+    border: none;
+    border-radius: 16px;
+    background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 8px;
+    box-shadow: 0 6px 20px rgba(139, 92, 246, 0.45);
+    transition: 0.2s;
+  }
+
+  .btn-primary-gradient:hover { opacity: 0.95; transform: translateY(-1px); }
+
+  .q-block {
+    background: rgba(15, 23, 42, 0.65);
+    border: 1px solid var(--glass-border);
+    border-radius: 18px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+
+  .q-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .pts-input { width: 75px; background: rgba(255, 255, 255, 0.1); border: 1px solid var(--neon-purple); border-radius: 10px; padding: 6px 8px; color: #fff; text-align: center; font-weight: 700; }
+
+  .option-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .option-row input[type="radio"] { width: 18px; height: 18px; accent-color: var(--success); cursor: pointer; }
+
+  .img-upload-label {
+    display: block;
+    border: 1.5px dashed rgba(192, 132, 252, 0.45);
+    border-radius: 12px;
+    padding: 10px;
+    text-align: center;
+    font-size: 0.82rem;
+    color: #d8b4fe;
+    cursor: pointer;
+    margin: 10px 0;
+  }
+
+  .preview-img { max-width: 100%; max-height: 160px; border-radius: 10px; margin-top: 8px; display: block; }
+
+  .student-q-card { background: var(--glass); border: 1px solid var(--glass-border); border-radius: 20px; padding: 18px; margin-bottom: 16px; }
+
+  .choice-btn {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #fff;
+    padding: 12px 15px;
+    border-radius: 12px;
+    margin-top: 8px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    transition: 0.2s;
+  }
+
+  .choice-btn.selected {
+    background: linear-gradient(90deg, rgba(59, 130, 246, 0.35), rgba(139, 92, 246, 0.45));
+    border-color: #c084fc;
+    font-weight: 700;
+  }
+
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(5, 7, 20, 0.82);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 1000;
+  }
+
+  .modal-box {
+    background: #16123b;
+    border: 1.5px solid var(--neon-purple);
+    border-radius: 24px;
+    padding: 24px;
+    width: 100%;
+    max-width: 400px;
+    text-align: center;
+    box-shadow: 0 15px 40px rgba(0,0,0,0.6);
+  }
+
+  .segmented-bar {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    background: rgba(255,255,255,0.07);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    padding: 4px;
+    margin-bottom: 16px;
+  }
+
+  .seg-btn {
+    padding: 11px;
+    border: none;
+    border-radius: 12px;
+    background: transparent;
+    color: var(--text-muted);
+    font-weight: 700;
+    font-size: 0.88rem;
+    cursor: pointer;
+    transition: 0.2s;
+  }
+
+  .seg-btn.active {
+    background: linear-gradient(90deg, #6366f1, #9333ea);
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(147, 51, 234, 0.4);
+  }
+
+  /* =========================================================
+     A4 PRINTABLE REPORT (EXACT REPLICA)
+  ========================================================= */
+  .a4-sheet {
+    background: #ffffff;
+    color: #111827;
+    border-radius: 12px;
+    position: relative;
+    overflow: hidden;
+    padding: 36px 26px 46px;
+    box-shadow: 0 12px 35px rgba(0,0,0,0.5);
+  }
+
+  .wave-top { position: absolute; top: 0; left: 0; width: 100%; height: 45px; pointer-events: none; }
+  .wave-bottom { position: absolute; bottom: 0; left: 0; width: 100%; height: 55px; pointer-events: none; }
+
+  .report-logo-header { text-align: center; margin-bottom: 14px; position: relative; z-index: 2; }
+  .report-emblem {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 48px; height: 48px; border-radius: 50%;
+    background: linear-gradient(135deg, #4f46e5, #7e22ce);
+    color: #fff; font-size: 1.5rem; font-weight: 800;
+    box-shadow: 0 4px 10px rgba(126, 34, 206, 0.25);
+  }
+
+  .purple-banner {
+    background: linear-gradient(90deg, #4c1d95, #7e22ce, #9333ea);
+    color: #ffffff; text-align: center; padding: 11px 14px;
+    border-radius: 10px; font-weight: 800; font-size: 0.98rem;
+    letter-spacing: 0.4px; margin-bottom: 14px; text-transform: uppercase;
+  }
+
+  .purple-outline-box {
+    border: 1.8px solid #7e22ce; border-radius: 12px;
+    padding: 11px 16px; margin-bottom: 12px;
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 0.88rem; font-weight: 700; color: #1e1b4b; background: #faf5ff;
+  }
+
+  .pill-counter-pink { display: inline-block; border: 1.5px solid #ec4899; color: #be185d; background: #fff; padding: 2px 10px; border-radius: 8px; margin-left: 4px; font-weight: 800; }
+  .pill-counter-blue { display: inline-block; border: 1.5px solid #3b82f6; color: #1d4ed8; background: #fff; padding: 2px 10px; border-radius: 8px; margin-left: 4px; font-weight: 800; }
+
+  .rep-sec-title { font-size: 0.92rem; font-weight: 800; color: #111827; margin: 14px 0 7px; }
+  .rep-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; text-align: center; margin-bottom: 12px; }
+  .rep-table th { padding: 8px 4px; color: #fff; border: 1px solid #6b21a8; font-weight: 700; }
+  .rep-table.blue-head th { background: #0c4a6e; border-color: #0c4a6e; }
+  .rep-table.purple-head th { background: #6b21a8; }
+  .rep-table td { padding: 8px 4px; border: 1px solid #9333ea; font-weight: 700; color: #111827; }
+  .rep-table td.first-col { background: #e9d5ff; color: #3b0764; }
+
+  .grades-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  .grades-table th, .grades-table td { padding: 10px 8px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.12); }
+  .grades-table th { color: #d8b4fe; }
+
+  @media print {
+    body { background: #fff !important; padding: 0 !important; }
+    .no-print { display: none !important; }
+    .app-container { max-width: 100% !important; padding: 0 !important; }
+    .a4-sheet { box-shadow: none !important; border-radius: 0 !important; min-height: 290mm; padding: 45px 32px 60px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app-container">
+  <header class="brand-header no-print">
+    <div class="brand-left" onclick="openProfPinModal()" title="Espace Professeur">
+      <div class="sigma-logo">Σ</div>
+      <div class="brand-title">MATH<br>PLATFORM</div>
+    </div>
+    <div id="modeIndicator" class="prof-badge" onclick="handleHeaderBadge()">Espace Élève</div>
+  </header>
+
+  <!-- VIEW 1: HOME (LEVELS GRID) -->
+  <section id="viewHome">
+    <div class="sub-header" style="margin-bottom:12px;">
+      <h2 style="font-size:1.1rem; color:var(--text-muted);">Niveaux Scolaires</h2>
+      <button id="btnAddLevel" class="btn-glass hidden" onclick="openAddLevelModal()">+ Ajouter un niveau</button>
+    </div>
+    <div class="grid-2" id="levelsGrid"></div>
+  </section>
+
+  <!-- VIEW 2: CLASSES -->
+  <section id="viewClasses" class="hidden">
+    <div class="sub-header">
+      <div>
+        <h2 id="classesLevelTitle">Classe - 2APIC</h2>
+        <p style="font-size: 0.8rem; color: var(--text-muted);" id="classesSubHint">Choisissez votre classe</p>
+      </div>
+      <div style="display:flex; gap:8px;">
+        <button id="btnAddClass" class="btn-glass hidden" onclick="openAddClassModal()">+ Ajouter une classe</button>
+        <button class="btn-glass" onclick="goHome()">← Retour</button>
+      </div>
+    </div>
+    <div id="classesGrid" class="grid-2"></div>
+  </section>
+
+  <!-- VIEW 3: STUDENT LOGIN -->
+  <section id="viewStudentLogin" class="hidden">
+    <div class="sub-header">
+      <h2 id="studentLoginClassTitle">2APIC-1</h2>
+      <button class="btn-glass" onclick="backToClasses()">← Classes</button>
+    </div>
+    <div class="login-glass-box">
+      <div class="grad-cap-icon">🎓</div>
+      <h2>Bienvenue</h2>
+      <p>Connectez-vous pour commencer l'évaluation</p>
+      <div class="input-group">
+        <label>Nom complet</label>
+        <input type="text" id="stuNameInput" class="glass-input" placeholder="Votre nom complet">
+      </div>
+      <div class="input-group">
+        <label>Code secret</label>
+        <input type="password" id="stuPinInput" class="glass-input" placeholder="••••••••">
+      </div>
+      <button class="btn-primary-gradient" onclick="verifyStudentLogin()">Commencer ↗</button>
+    </div>
+  </section>
+
+  <!-- VIEW 4: STUDENT EXAM -->
+  <section id="viewStudentExam" class="hidden">
+    <div class="sub-header">
+      <div>
+        <h2 id="activeExamTitle">Évaluation</h2>
+        <p style="font-size: 0.82rem; color: #38bdf8;" id="activeStudentLabel"></p>
+      </div>
+    </div>
+    <div id="studentQuestionsList"></div>
+    <button id="btnSubmitExam" class="btn-primary-gradient" onclick="submitStudentExam()">Terminer et voir ma note ✓</button>
+    <div id="studentScoreCard" class="login-glass-box hidden">
+      <div class="grad-cap-icon">🏆</div>
+      <h2>Évaluation Terminée</h2>
+      <p>Votre note finale enregistrée :</p>
+      <div style="font-size: 2.6rem; font-weight: 800; color: #38bdf8; margin: 14px 0;" id="finalScoreDisplay">0 / 20</div>
+      <button class="btn-glass" onclick="goHome()">Retour à l'accueil</button>
+    </div>
+  </section>
+
+  <!-- VIEW 5: PROFESSOR HUB -->
+  <section id="viewProfClassHub" class="hidden">
+    <div class="sub-header">
+      <h2 id="profHubClassTitle">2APIC-1</h2>
+      <button class="btn-glass" onclick="backToClasses()">← Classes</button>
+    </div>
+    <div class="q-block" style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+      <div>
+        <div style="font-weight:700; font-size:0.92rem;">Liste des élèves (Excel)</div>
+        <div style="font-size:0.78rem; color:var(--text-muted);" id="excelCountStatus">0 élève enregistré</div>
+      </div>
+      <label class="btn-glass" style="background: rgba(16, 185, 129, 0.2); border-color: #10b981; cursor:pointer;">
+        📥 Importer Excel
+        <input type="file" accept=".xlsx,.xls,.csv" style="display:none;" onchange="handleExcelUpload(event)">
+      </label>
+    </div>
+    <div class="stack-cards">
+      <div class="wide-card" onclick="openExamCreator()">
+        <div class="card-icon">📝</div>
+        <div class="card-title">Créer évaluation</div>
+        <div class="card-sub">Nouveau quiz, questions, images et lien de partage</div>
+      </div>
+      <div class="wide-card" onclick="openExamArchives()">
+        <div class="card-icon">📈</div>
+        <div class="card-title">Résultats & Archives</div>
+        <div class="card-sub">Rapports A4 et listes des notes par évaluation</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- VIEW 6: EXAM CREATOR -->
+  <section id="viewExamCreator" class="hidden">
+    <div class="sub-header">
+      <h2>Créer un quiz</h2>
+      <button class="btn-glass" onclick="openProfClassHub()">← Retour</button>
+    </div>
+    <div class="input-group">
+      <label>Titre de l'examen</label>
+      <input type="text" id="examTitleInput" class="glass-input" placeholder="Ex: Évaluation N°1">
+    </div>
+    <div id="questionsBuilderContainer"></div>
+    <button class="btn-glass" style="width:100%; margin-bottom:14px; border-style:dashed;" onclick="addQuestionBlock()">+ Ajouter une question</button>
+    <div style="display:grid; grid-template-columns: 1.4fr 1fr; gap:10px;">
+      <button class="btn-primary-gradient" style="margin-top:0;" onclick="saveAndActivateExam()">Enregistrer l'examen</button>
+      <button class="btn-glass" onclick="shareCurrentExamLink()">📤 Partager</button>
+    </div>
+  </section>
+
+  <!-- VIEW 7: ARCHIVES -->
+  <section id="viewArchives" class="hidden">
+    <div class="sub-header">
+      <div>
+        <h2>Évaluation</h2>
+        <p style="font-size:0.8rem; color:var(--text-muted);" id="archiveSubTitle">Archives de la classe</p>
+      </div>
+      <button class="btn-glass" onclick="openProfClassHub()">← Retour</button>
+    </div>
+    <div id="archivesGrid" class="grid-2"></div>
+  </section>
+
+  <!-- VIEW 8: INDEPENDENT EXAM FILE (REPORT A4) -->
+  <section id="viewExamReportFile" class="hidden">
+      <div class="sub-header no-print">
+      <div>
+        <h2 id="reportHeaderExamName">Évaluation N°1</h2>
+        <p style="font-size:0.8rem; color:var(--text-muted);" id="reportHeaderClassName">2APIC-1</p>
+      </div>
+      <button class="btn-glass" onclick="openExamArchives()">← Archives</button>
+    </div>
+    <div class="segmented-bar no-print">
+      <button id="segBtnReport" class="seg-btn active" onclick="switchReportTab('report')">Rapport d'évaluation</button>
+      <button id="segBtnList" class="seg-btn" onclick="switchReportTab('list')">Liste des Notes</button>
+    </div>
+
+    <!-- TAB A: REPORT -->
+    <div id="tabReportContent">
+      <button class="btn-primary-gradient no-print" style="background: #10b981; margin-bottom: 14px;" onclick="window.print()">🖨️ Imprimer / PDF (A4)</button>
+      <div class="a4-sheet">
+        <svg class="wave-top" viewBox="0 0 500 60" preserveAspectRatio="none">
+          <path d="M0,0 L280,0 C190,45 90,25 0,55 Z" fill="#6b21a8" opacity="0.85"/>
+          <path d="M0,0 L360,0 C250,35 130,15 0,40 Z" fill="#a855f7" opacity="0.45"/>
+        </svg>
+        <div class="report-logo-header"><div class="report-emblem">Σ</div></div>
+        <div class="purple-banner" id="repBannerText">RAPPORT D'ÉVALUATION SUR : ÉVALUATION N°1</div>
+        <div class="purple-outline-box">
+          <div>Niveau : <span id="repNiveau">2APIC</span></div>
+          <div>Classe : <span id="repClasse">2APIC-1</span></div>
+        </div>
+        <div class="purple-outline-box" style="font-size: 0.82rem;">
+          <div>Nombre des élèves : <strong id="repTotalStu">0</strong></div>
+          <div>Nombre de présence : <span class="pill-counter-pink" id="repPresentStu">0</span></div>
+          <div>Nombre d'absence : <span class="pill-counter-blue" id="repAbsentStu">0</span></div>
+        </div>
+        <div class="rep-sec-title">1. Notes Extrêmes par Devoir</div>
+        <table class="rep-table blue-head">
+          <thead>
+            <tr>
+              <th style="width:30%;">Devoir</th>
+              <th style="width:35%;">Note la plus élevée</th>
+              <th style="width:35%;">Note la plus basse</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="first-col" id="repT1Name">Devoir</td>
+              <td id="repMaxNote">-</td>
+              <td id="repMinNote">-</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="rep-sec-title">2. Répartition et Résultats des Devoirs</div>
+        <table class="rep-table purple-head">
+          <thead>
+            <tr>
+              <th>Devoir</th>
+              <th>0 ≤ N &lt; 5</th>
+              <th>5 ≤ N &lt; 10</th>
+              <th>10 ≤ N &lt; 15</th>
+              <th>15 ≤ N ≤ 20</th>
+              <th>Moyenne</th>
+              <th>Pourcentage N ≥ 10</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="first-col" id="repT2Name">Devoir</td>
+              <td id="repCat1">0</td>
+              <td id="repCat2">0</td>
+              <td id="repCat3">0</td>
+              <td id="repCat4">0</td>
+              <td id="repMoyenne">-</td>
+              <td id="repSuccessRate">-</td>
+            </tr>
+          </tbody>
+        </table>
+        <svg class="wave-bottom" viewBox="0 0 500 70" preserveAspectRatio="none">
+          <path d="M0,45 C160,75 340,15 500,30 L500,70 L0,70 Z" fill="#a855f7" opacity="0.45"/>
+          <path d="M0,60 C180,80 360,35 500,45 L500,70 L0,70 Z" fill="#6b21a8" opacity="0.9"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- TAB B: GRADES -->
+    <div id="tabListContent" class="hidden no-print">
+      <button class="btn-primary-gradient" style="margin-bottom: 14px;" onclick="exportGradesToExcel()">📥 Télécharger la Liste (Excel)</button>
+      <div class="q-block">
+        <table class="grades-table">
+          <thead>
+            <tr>
+              <th>Code</th>
+              <th>Nom Complet</th>
+              <th>Note / 20</th>
+            </tr>
+          </thead>
+          <tbody id="gradesTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- MODALS -->
+<div id="pinModal" class="modal-overlay hidden">
+  <div class="modal-box">
+    <h3 style="margin-bottom:10px;">Accès Professeur</h3>
+    <input type="password" id="profPinInput" class="glass-input" placeholder="Code secret" style="text-align:center; margin-bottom:14px;">
+    <div style="display:flex; gap:10px;">
+      <button class="btn-primary-gradient" style="margin-top:0;" onclick="checkProfPin()">Valider</button>
+      <button class="btn-glass" onclick="closeModals()">Annuler</button>
+    </div>
+  </div>
+</div>
+
+<div id="addLevelModal" class="modal-overlay hidden">
+  <div class="modal-box">
+    <h3 style="margin-bottom:10px;">Ajouter un niveau</h3>
+    <input type="text" id="newLevelNameInput" class="glass-input" placeholder="Ex: 3APIC" style="margin-bottom:14px;">
+    <div style="display:flex; gap:10px;">
+      <button class="btn-primary-gradient" style="margin-top:0;" onclick="confirmAddLevel()">Ajouter</button>
+      <button class="btn-glass" onclick="closeModals()">Annuler</button>
+    </div>
+  </div>
+</div>
+
+<div id="addClassModal" class="modal-overlay hidden">
+  <div class="modal-box">
+    <h3 style="margin-bottom:10px;">Ajouter une classe</h3>
+    <input type="text" id="newClassNameInput" class="glass-input" placeholder="Ex: 2APIC-5" style="margin-bottom:14px;">
+    <div style="display:flex; gap:10px;">
+      <button class="btn-primary-gradient" style="margin-top:0;" onclick="confirmAddClass()">Ajouter</button>
+      <button class="btn-glass" onclick="closeModals()">Annuler</button>
+    </div>
+  </div>
+</div>
+
+<div id="shareModal" class="modal-overlay hidden">
+  <div class="modal-box">
+    <div style="font-size:2rem; margin-bottom:8px;">🔗</div>
+    <h3 style="margin-bottom:8px;">Lien de l'évaluation prêt !</h3>
+    <input type="text" id="shareUrlBox" class="glass-input" readonly style="font-size:0.8rem; margin-bottom:14px;">
+    <div style="display:flex; gap:10px;">
+      <button class="btn-primary-gradient" style="margin-top:0;" onclick="copyShareLink()">📋 Copier le lien</button>
+      <button class="btn-glass" onclick="closeModals()">Fermer</button>
+    </div>
+  </div>
+</div>
+<script>
+  const PROF_SECRET = "19471964";
+  let isProfMode = false;
+  let currentLevel = "";
+  let currentClass = "";
+  let currentStudent = null;
+  let activeExamObj = null;
+  let selectedReportExamId = null;
+  let studentAnswers = {};
+
+  let appDB = {
+    levels: ["1APIC", "2APIC"],
+    classes: {
+      "1APIC": ["1APIC-5"],
+      "2APIC": ["2APIC-1", "2APIC-2", "2APIC-3", "2APIC-4"]
+    },
+    students: {},
+    exams: {}
+  };
+
+  async function loadDataFromCloud() {
+    try {
+      if (!window.FB_DB) return;
+      const docRef = window.FB_Doc(window.FB_DB, "platformData", "mainStore");
+      const docSnap = await window.FB_GetDoc(docRef);
+      if (docSnap.exists()) {
+        appDB = docSnap.data();
+        if (!appDB.levels) appDB.levels = ["1APIC", "2APIC"];
+      } else {
+        await window.FB_SetDoc(docRef, appDB);
+      }
+    } catch (e) {
+      console.error("Cloud load error", e);
+    }
+  }
+
+  async function saveDB() {
+    try {
+      if (!window.FB_DB) return;
+      const docRef = window.FB_Doc(window.FB_DB, "platformData", "mainStore");
+      await window.FB_SetDoc(docRef, appDB);
+    } catch (e) {
+      console.error("Cloud save error", e);
+    }
+  }
+
+  window.initializeAppReady = async function() {
+    await loadDataFromCloud();
+    renderLevelsGrid();
+    const params = new URLSearchParams(window.location.search);
+    const lvl = params.get("level");
+    const cls = params.get("class");
+    if (lvl && cls) {
+      currentLevel = lvl;
+      openClassTarget(cls);
+    }
+  };
+
+  function hideAllViews() {
+    ["viewHome", "viewClasses", "viewStudentLogin", "viewStudentExam",
+     "viewProfClassHub", "viewExamCreator", "viewArchives", "viewExamReportFile"]
+      .forEach(id => document.getElementById(id).classList.add("hidden"));
+  }
+
+  function goHome() {
+    hideAllViews();
+    document.getElementById("viewHome").classList.remove("hidden");
+    document.getElementById("btnAddLevel").classList.toggle("hidden", !isProfMode);
+    renderLevelsGrid();
+  }
+
+  const mathIcons = ["π", "📐", "🧮", "🔺", "∑", "📏"];
+
+  function renderLevelsGrid() {
+    const grid = document.getElementById("levelsGrid");
+    grid.innerHTML = "";
+    const list = appDB.levels || ["1APIC", "2APIC"];
+
+    list.forEach((lvl, idx) => {
+      const card = document.createElement("div");
+      card.className = "square-card" + (idx === 0 ? " blue-glow" : "");
+      card.innerHTML = `
+        ${isProfMode && list.length > 1 ? `<button class="btn-delete-mini" onclick="deleteLevel(event, '${lvl}')">✕</button>` : ""}
+        <div class="card-icon">${mathIcons[idx % mathIcons.length]}</div>
+        <div class="card-title">${lvl}</div>
+        <div class="card-sub">Niveau Collège</div>
+      `;
+      card.onclick = () => selectLevel(lvl);
+      grid.appendChild(card);
+    });
+  }
+
+  function openAddLevelModal() {
+    document.getElementById("newLevelNameInput").value = "";
+    document.getElementById("addLevelModal").classList.remove("hidden");
+  }
+
+  async function confirmAddLevel() {
+    const name = document.getElementById("newLevelNameInput").value.trim().toUpperCase();
+    if (!name) return;
+    if (!appDB.levels) appDB.levels = ["1APIC", "2APIC"];
+    if (!appDB.levels.includes(name)) {
+      appDB.levels.push(name);
+      if (!appDB.classes[name]) appDB.classes[name] = [];
+      await saveDB();
+    }
+    closeModals();
+    renderLevelsGrid();
+  }
+
+  async function deleteLevel(e, lvl) {
+    e.stopPropagation();
+    if (confirm("Supprimer le niveau " + lvl + " ?")) {
+      appDB.levels = appDB.levels.filter(l => l !== lvl);
+      delete appDB.classes[lvl];
+      await saveDB();
+      renderLevelsGrid();
+    }
+  }
+
+  function openProfPinModal() {
+    if (isProfMode) { goHome(); return; }
+    document.getElementById("profPinInput").value = "";
+    document.getElementById("pinModal").classList.remove("hidden");
+  }
+
+  function checkProfPin() {
+    const val = document.getElementById("profPinInput").value.trim();
+    if (val === PROF_SECRET) {
+      isProfMode = true;
+      document.getElementById("modeIndicator").innerText = "Mode Prof (Quitter)";
+      document.getElementById("modeIndicator").style.background = "rgba(16, 185, 129, 0.25)";
+      document.getElementById("modeIndicator").style.borderColor = "#10b981";
+      closeModals();
+      goHome();
+    } else { alert("Code secret incorrect !"); }
+  }
+
+  function handleHeaderBadge() {
+    if (isProfMode) {
+      isProfMode = false;
+      document.getElementById("modeIndicator").innerText = "Espace Élève";
+      document.getElementById("modeIndicator").style.background = "";
+      document.getElementById("modeIndicator").style.borderColor = "";
+      goHome();
+    } else { openProfPinModal(); }
+  }
+
+  function closeModals() {
+    document.querySelectorAll(".modal-overlay").forEach(m => m.classList.add("hidden"));
+  }
+
+  function selectLevel(lvl) {
+    currentLevel = lvl;
+    hideAllViews();
+    document.getElementById("viewClasses").classList.remove("hidden");
+    document.getElementById("classesLevelTitle").innerText = "Classe - " + lvl;
+    document.getElementById("btnAddClass").classList.toggle("hidden", !isProfMode);
+    renderClassesGrid();
+  }
+
+  function backToClasses() { selectLevel(currentLevel); }
+
+  function renderClassesGrid() {
+    const grid = document.getElementById("classesGrid");
+    grid.innerHTML = "";
+    const list = appDB.classes[currentLevel] || [];
+    list.forEach((cls, idx) => {
+      const card = document.createElement("div");
+      card.className = "square-card";
+      card.innerHTML = `
+        ${isProfMode ? `<button class="btn-delete-mini" onclick="deleteClass(event, '${cls}')">✕</button>` : ""}
+        <div class="card-icon">${mathIcons[idx % mathIcons.length]}</div>
+        <div class="card-title">${cls}</div>
+      `;
+      card.onclick = () => openClassTarget(cls);
+      grid.appendChild(card);
+    });
+  }
+  function openAddClassModal() {
+    document.getElementById("newClassNameInput").value = "";
+    document.getElementById("addClassModal").classList.remove("hidden");
+  }
+
+  async function confirmAddClass() {
+    const name = document.getElementById("newClassNameInput").value.trim().toUpperCase();
+    if (!name) return;
+    if (!appDB.classes[currentLevel]) appDB.classes[currentLevel] = [];
+    if (!appDB.classes[currentLevel].includes(name)) {
+      appDB.classes[currentLevel].push(name);
+      await saveDB();
+    }
+    closeModals();
+    renderClassesGrid();
+  }
+
+  async function deleteClass(e, cls) {
+    e.stopPropagation();
+    if (confirm("Supprimer la classe " + cls + " ?")) {
+      appDB.classes[currentLevel] = appDB.classes[currentLevel].filter(c => c !== cls);
+      await saveDB();
+      renderClassesGrid();
+    }
+  }
+
+  function openClassTarget(cls) {
+    currentClass = cls;
+    if (isProfMode) { openProfClassHub(); }
+    else {
+      hideAllViews();
+      document.getElementById("viewStudentLogin").classList.remove("hidden");
+      document.getElementById("studentLoginClassTitle").innerText = cls;
+    }
+  }
+
+  function openProfClassHub() {
+    hideAllViews();
+    document.getElementById("viewProfClassHub").classList.remove("hidden");
+    document.getElementById("profHubClassTitle").innerText = currentClass;
+    const count = (appDB.students[currentClass] || []).length;
+    document.getElementById("excelCountStatus").innerText = `${count} élève(s) enregistré(s)`;
+  }
+
+  async function handleExcelUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+      const data = new Uint8Array(e.target.result);
+      const workbook = XLSX.read(data, { type: "array" });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+      const parsedStudents = [];
+      rows.forEach((row, index) => {
+        if (!row || row.length === 0) return;
+        const cell0 = String(row[0] || "").trim();
+        const cell1 = String(row[1] || "").trim();
+        if (index === 0 && (cell0.toLowerCase().includes("code") || cell0.toLowerCase().includes("nom"))) return;
+        if (cell0 && cell1) parsedStudents.push({ pin: cell0, name: cell1 });
+        else if (cell0) parsedStudents.push({ pin: cell0, name: "Élève " + cell0 });
+      });
+      if (parsedStudents.length > 0) {
+        appDB.students[currentClass] = parsedStudents;
+        await saveDB();
+        document.getElementById("excelCountStatus").innerText = `${parsedStudents.length} élève(s) enregistré(s)`;
+        alert(`✅ ${parsedStudents.length} codes importés avec succès !`);
+      } else { alert("Aucune donnée valide trouvée."); }
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  let questionCounter = 0;
+  function openExamCreator() {
+    hideAllViews();
+    document.getElementById("viewExamCreator").classList.remove("hidden");
+    document.getElementById("examTitleInput").value = "";
+    document.getElementById("questionsBuilderContainer").innerHTML = "";
+    questionCounter = 0;
+    addQuestionBlock();
+  }
+
+  function addQuestionBlock() {
+    questionCounter++;
+    const qId = questionCounter;
+    const container = document.getElementById("questionsBuilderContainer");
+    const div = document.createElement("div");
+    div.className = "q-block";
+    div.id = `qBlock_${qId}`;
+    div.innerHTML = `
+      <div class="q-header">
+        <span style="font-weight:700; color:#c084fc;">Question ${qId}</span>
+        <div style="display:flex; align-items:center; gap:6px;">
+          <span style="font-size:0.8rem;">Points:</span>
+          <input type="number" step="0.5" value="2" class="pts-input q-pts">
+        </div>
+      </div>
+      <textarea class="glass-input q-text" rows="2" placeholder="Énoncé..."></textarea>
+      <label class="img-upload-label">
+        📷 Téléverser une image (optionnel)
+        <input type="file" accept="image/*" style="display:none;" onchange="previewQuestionImage(event, ${qId})">
+        <img id="qImgPreview_${qId}" class="preview-img hidden" />
+      </label>
+      <div style="margin-top:8px;">
+        ${[0, 1, 2, 3].map(optIdx => `
+          <div class="option-row">
+            <input type="radio" name="correct_${qId}" value="${optIdx}" ${optIdx === 0 ? "checked" : ""}>
+            <input type="text" class="glass-input q-opt" placeholder="Option ${String.fromCharCode(65 + optIdx)}">
+          </div>
+        `).join("")}
+      </div>
+    `;
+    container.appendChild(div);
+  }
+
+  function previewQuestionImage(event, qId) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const img = document.getElementById(`qImgPreview_${qId}`);
+      img.src = e.target.result;
+      img.classList.remove("hidden");
+    };
+    reader.readAsDataURL(file);
+    }
+  async function saveAndActivateExam() {
+    const title = document.getElementById("examTitleInput").value.trim();
+    if (!title) { alert("Saisissez le titre."); return; }
+    const blocks = document.querySelectorAll(".q-block");
+    const questions = [];
+    blocks.forEach(b => {
+      const text = b.querySelector(".q-text").value.trim();
+      const pts = parseFloat(b.querySelector(".q-pts").value) || 1;
+      const imgEl = b.querySelector(".preview-img");
+      const imgSrc = imgEl && !imgEl.classList.contains("hidden") ? imgEl.src : "";
+      const opts = Array.from(b.querySelectorAll(".q-opt")).map(i => i.value.trim());
+      const correctRadio = b.querySelector('input[type="radio"]:checked');
+      const correctIdx = correctRadio ? parseInt(correctRadio.value) : 0;
+      if (text || imgSrc) questions.push({ text, pts, img: imgSrc, options: opts, correct: correctIdx });
+    });
+    if (questions.length === 0) { alert("Ajoutez une question."); return; }
+
+    if (!appDB.exams[currentClass]) appDB.exams[currentClass] = [];
+    appDB.exams[currentClass].forEach(ex => ex.active = false);
+
+    const newExam = {
+      id: "exam_" + Date.now(),
+      title: title,
+      date: new Date().toLocaleDateString("fr-FR"),
+      active: true,
+      questions: questions,
+      results: {}
+    };
+
+    appDB.exams[currentClass].push(newExam);
+    await saveDB();
+    alert("✅ Examen enregistré et synchronisé !");
+    shareCurrentExamLink();
+  }
+
+  function shareCurrentExamLink() {
+    const baseUrl = window.location.href.split("?")[0];
+    const directUrl = `${baseUrl}?level=${encodeURIComponent(currentLevel)}&class=${encodeURIComponent(currentClass)}`;
+    document.getElementById("shareUrlBox").value = directUrl;
+    document.getElementById("shareModal").classList.remove("hidden");
+  }
+
+  function copyShareLink() {
+    const input = document.getElementById("shareUrlBox");
+    input.select();
+    navigator.clipboard.writeText(input.value);
+    alert("Lien copié !");
+  }
+
+  async function verifyStudentLogin() {
+    await loadDataFromCloud();
+    const name = document.getElementById("stuNameInput").value.trim();
+    const pin = document.getElementById("stuPinInput").value.trim();
+    if (!name || !pin) { alert("Remplissez tous les champs."); return; }
+
+    const roster = appDB.students[currentClass] || [];
+    const found = roster.find(s => String(s.pin).toLowerCase() === pin.toLowerCase());
+    if (!found) { alert("Code secret invalide."); return; }
+
+    const classExams = appDB.exams[currentClass] || [];
+    const activeExam = classExams.find(ex => ex.active);
+    if (!activeExam) { alert("Aucun examen actif."); return; }
+
+    if (activeExam.results && activeExam.results[found.pin]) {
+      alert("Vous avez déjà passé cet examen ! Note : " + activeExam.results[found.pin].score + " / 20");
+      return;
+    }
+
+    currentStudent = { pin: found.pin, name: name };
+    activeExamObj = activeExam;
+    startStudentExam();
+  }
+
+  function startStudentExam() {
+    hideAllViews();
+    document.getElementById("viewStudentExam").classList.remove("hidden");
+    document.getElementById("activeExamTitle").innerText = activeExamObj.title;
+    document.getElementById("activeStudentLabel").innerText = `${currentStudent.name} (${currentClass})`;
+    document.getElementById("btnSubmitExam").classList.remove("hidden");
+    document.getElementById("studentScoreCard").classList.add("hidden");
+
+    studentAnswers = {};
+    const list = document.getElementById("studentQuestionsList");
+    list.innerHTML = "";
+
+    activeExamObj.questions.forEach((q, qIdx) => {
+      const card = document.createElement("div");
+      card.className = "student-q-card";
+      card.innerHTML = `
+        <div style="font-weight:700; margin-bottom:8px; color:#d8b4fe;">Question ${qIdx + 1} (${q.pts} pts)</div>
+        <div style="margin-bottom:10px; line-height:1.4;">${q.text}</div>
+        ${q.img ? `<img src="${q.img}" class="preview-img" style="margin-bottom:10px;" />` : ""}
+        <div>
+          ${q.options.map((opt, oIdx) => opt ? `
+            <button class="choice-btn" id="q_${qIdx}_opt_${oIdx}" onclick="selectStudentChoice(${qIdx}, ${oIdx})">
+              ${String.fromCharCode(65 + oIdx)}. ${opt}
+            </button>
+          ` : "").join("")}
+        </div>
+      `;
+      list.appendChild(card);
+    });
+  }
+
+  function selectStudentChoice(qIdx, oIdx) {
+    studentAnswers[qIdx] = oIdx;
+    for (let i = 0; i < 4; i++) {
+      const btn = document.getElementById(`q_${qIdx}_opt_${i}`);
+      if (btn) btn.classList.toggle("selected", i === oIdx);
+    }
+  }
+
+  async function submitStudentExam() {
+    let earned = 0;
+    let totalPossible = 0;
+    activeExamObj.questions.forEach((q, idx) => {
+      totalPossible += q.pts;
+      if (studentAnswers[idx] === q.correct) earned += q.pts;
+    });
+
+    const finalOutOf20 = totalPossible > 0 ? Math.round(((earned / totalPossible) * 20) * 100) / 100 : 0;
+
+    const classExams = appDB.exams[currentClass];
+    const targetExam = classExams.find(e => e.id === activeExamObj.id);
+    if (targetExam) {
+      if (!targetExam.results) targetExam.results = {};
+      targetExam.results[currentStudent.pin] = { name: currentStudent.name, score: finalOutOf20 };
+      await saveDB();
+    }
+
+    document.getElementById("studentQuestionsList").innerHTML = "";
+    document.getElementById("btnSubmitExam").classList.add("hidden");
+    document.getElementById("studentScoreCard").classList.remove("hidden");
+    document.getElementById("finalScoreDisplay").innerText = `${finalOutOf20} / 20`;
+  }
+  async function openExamArchives() {
+    await loadDataFromCloud();
+    hideAllViews();
+    document.getElementById("viewArchives").classList.remove("hidden");
+    document.getElementById("archiveSubTitle").innerText = `Classe : ${currentClass}`;
+
+    const grid = document.getElementById("archivesGrid");
+    grid.innerHTML = "";
+    const exams = appDB.exams[currentClass] || [];
+
+    if (exams.length === 0) {
+      grid.innerHTML = `<p style="grid-column: span 2; text-align:center; color:var(--text-muted); padding:30px;">Aucune évaluation.</p>`;
+      return;
+    }
+
+    exams.forEach((ex, idx) => {
+      const presCount = Object.keys(ex.results || {}).length;
+      const totalCount = (appDB.students[currentClass] || []).length;
+      const card = document.createElement("div");
+      card.className = "square-card";
+      card.innerHTML = `
+        <div class="card-icon">${mathIcons[idx % mathIcons.length]}</div>
+        <div class="card-title" style="font-size:0.98rem;">${ex.title}</div>
+        <div class="card-sub">${ex.date} &bull; ${presCount}/${totalCount} Présents</div>
+      `;
+      card.onclick = () => openIndependentReport(ex.id);
+      grid.appendChild(card);
+    });
+  }
+
+  function openIndependentReport(examId) {
+    selectedReportExamId = examId;
+    const exam = (appDB.exams[currentClass] || []).find(e => e.id === examId);
+    if (!exam) return;
+
+    hideAllViews();
+    document.getElementById("viewExamReportFile").classList.remove("hidden");
+    document.getElementById("reportHeaderExamName").innerText = exam.title;
+    document.getElementById("reportHeaderClassName").innerText = currentClass;
+
+    document.getElementById("repBannerText").innerText = `RAPPORT D'ÉVALUATION SUR : ${exam.title}`;
+    document.getElementById("repNiveau").innerText = currentLevel;
+    document.getElementById("repClasse").innerText = currentClass;
+    document.getElementById("repT1Name").innerText = exam.title;
+    document.getElementById("repT2Name").innerText = exam.title;
+
+    const roster = appDB.students[currentClass] || [];
+    const resultsMap = exam.results || {};
+    const scores = Object.values(resultsMap).map(r => r.score);
+
+    const totalEleves = roster.length > 0 ? roster.length : scores.length;
+    const presents = scores.length;
+    const absents = Math.max(0, totalEleves - presents);
+
+    document.getElementById("repTotalStu").innerText = totalEleves;
+    document.getElementById("repPresentStu").innerText = presents;
+    document.getElementById("repAbsentStu").innerText = absents;
+
+    if (presents > 0) {
+      const maxN = Math.max(...scores);
+      const minN = Math.min(...scores);
+      const c1 = scores.filter(n => n >= 0 && n < 5).length;
+      const c2 = scores.filter(n => n >= 5 && n < 10).length;
+      const c3 = scores.filter(n => n >= 10 && n < 15).length;
+      const c4 = scores.filter(n => n >= 15 && n <= 20).length;
+      const avg = (scores.reduce((a, b) => a + b, 0) / presents).toFixed(2);
+      const passRate = (((c3 + c4) / presents) * 100).toFixed(1) + "%";
+
+      document.getElementById("repMaxNote").innerText = maxN.toFixed(2);
+      document.getElementById("repMinNote").innerText = minN.toFixed(2);
+      document.getElementById("repCat1").innerText = c1;
+      document.getElementById("repCat2").innerText = c2;
+      document.getElementById("repCat3").innerText = c3;
+      document.getElementById("repCat4").innerText = c4;
+      document.getElementById("repMoyenne").innerText = avg;
+      document.getElementById("repSuccessRate").innerText = passRate;
+    } else {
+      ["repMaxNote", "repMinNote", "repMoyenne", "repSuccessRate"].forEach(id => document.getElementById(id).innerText = "-");
+      ["repCat1", "repCat2", "repCat3", "repCat4"].forEach(id => document.getElementById(id).innerText = "0");
+    }
+
+    const tbody = document.getElementById("gradesTableBody");
+    tbody.innerHTML = "";
+    const allCodes = roster.length > 0 ? roster : Object.keys(resultsMap).map(p => ({ pin: p, name: resultsMap[p].name }));
+
+    allCodes.forEach(st => {
+      const res = resultsMap[st.pin];
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${st.pin}</td>
+        <td>${res ? res.name : st.name}</td>
+        <td>${res ? `<strong style="color:#6ee7b7;">${res.score.toFixed(2)}</strong>` : `<span style="color:#fca5a5;">Absent</span>`}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    switchReportTab("report");
+  }
+
+  function switchReportTab(tab) {
+    document.getElementById("tabReportContent").classList.toggle("hidden", tab !== "report");
+    document.getElementById("tabListContent").classList.toggle("hidden", tab !== "list");
+    document.getElementById("segBtnReport").classList.toggle("active", tab === "report");
+    document.getElementById("segBtnList").classList.toggle("active", tab === "list");
+  }
+
+  function exportGradesToExcel() {
+    const exam = (appDB.exams[currentClass] || []).find(e => e.id === selectedReportExamId);
+    if (!exam) return;
+    const roster = appDB.students[currentClass] || [];
+    const resultsMap = exam.results || {};
+    const rows = [["Code Secret", "Nom Complet", "Note / 20"]];
+    const allCodes = roster.length > 0 ? roster : Object.keys(resultsMap).map(p => ({ pin: p, name: resultsMap[p].name }));
+    allCodes.forEach(st => {
+      const res = resultsMap[st.pin];
+      rows.push([st.pin, res ? res.name : st.name, res ? res.score : "Absent"]);
+    });
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Notes");
+    XLSX.writeFile(wb, `Notes_${currentClass}_${exam.title}.xlsx`);
+  }
+</script>
+</body>
+</html>
