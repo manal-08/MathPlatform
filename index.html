@@ -78,7 +78,6 @@
   .card-title { font-size: 1.05rem; font-weight: 700; color: #fff; }
   .card-sub { font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; }
   
-  /* Archive card specific layout with clear action buttons */
   .archive-card {
     background: linear-gradient(145deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
     backdrop-filter: blur(14px); border: 1.5px solid var(--glass-border); border-radius: 22px; padding: 16px;
@@ -90,6 +89,7 @@
   }
   .btn-edit-action { background: rgba(59, 130, 246, 0.35); border: 1px solid rgba(59, 130, 246, 0.6); }
   .btn-delete-action { background: rgba(239, 68, 68, 0.35); border: 1px solid rgba(239, 68, 68, 0.6); }
+  .btn-share-action { background: rgba(16, 185, 129, 0.35); border: 1px solid rgba(16, 185, 129, 0.6); }
   .btn-report-action { grid-column: span 2; background: linear-gradient(90deg, #6366f1, #9333ea); border: none; }
 
   .btn-delete-mini {
@@ -143,6 +143,24 @@
   .segmented-bar { display: grid; grid-template-columns: 1fr 1fr; background: rgba(255,255,255,0.07); border: 1px solid var(--glass-border); border-radius: 16px; padding: 4px; margin-bottom: 16px; }
   .seg-btn { padding: 11px; border: none; border-radius: 12px; background: transparent; color: var(--text-muted); font-weight: 700; font-size: 0.88rem; cursor: pointer; }
   .seg-btn.active { background: linear-gradient(90deg, #6366f1, #9333ea); color: #fff; }
+
+  /* تنسيق الكسر الرياضي الأفقي التلقائي */
+  .math-fraction {
+    display: inline-flex;
+    flex-direction: column;
+    vertical-align: middle;
+    text-align: center;
+    margin: 0 4px;
+    font-size: 0.95em;
+    font-weight: 700;
+  }
+  .math-num {
+    border-bottom: 1.5px solid currentColor;
+    padding-bottom: 1px;
+  }
+  .math-den {
+    padding-top: 1px;
+  }
 
   /* A4 Report */
   .a4-sheet { background: #ffffff; color: #111827; border-radius: 12px; position: relative; overflow: hidden; padding: 36px 26px 46px; box-shadow: 0 12px 35px rgba(0,0,0,0.5); }
@@ -300,9 +318,8 @@
     </div>
     <div id="questionsBuilderContainer"></div>
     <button class="btn-glass" style="width:100%; margin-bottom:14px; border-style:dashed;" onclick="addQuestionBlock()">+ Ajouter une question</button>
-    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+    <div style="display:grid; grid-template-columns: 1fr; gap:10px;">
       <button class="btn-primary-gradient" style="margin-top:0;" onclick="saveAndActivateExam()">Enregistrer</button>
-      <button class="btn-glass" onclick="shareCurrentExamLink()">📤 Partager</button>
     </div>
   </section>
 
@@ -356,7 +373,7 @@
             <tr>
               <th style="width:30%;">Devoir</th>
               <th style="width:35%;">Note la plus élevée</th>
-              <th style="width:35%;">Note la plus basse</th>
+                <th style="width:35%;">Note la plus basse</th>
             </tr>
           </thead>
           <tbody>
@@ -367,7 +384,7 @@
             </tr>
           </tbody>
         </table>
-            <div class="rep-sec-title">2. Répartition et Résultats des Devoirs</div>
+        <div class="rep-sec-title">2. Répartition et Résultats des Devoirs</div>
         <table class="rep-table purple-head">
           <thead>
             <tr>
@@ -482,6 +499,7 @@
   let activeExamObj = null;
   let editingExamId = null; 
   let selectedReportExamId = null;
+  let lastSharedExamId = null; 
   let studentAnswers = {};
 
   let appDB = JSON.parse(localStorage.getItem("mathPlatformLocalDB")) || {
@@ -493,6 +511,15 @@
     students: {},
     exams: {}
   };
+
+  // دالة ذكية لتحويل أي كسر يكتب هكذا 3/4 تلقائياً إلى كسر خط أفقي
+  function formatFractions(text) {
+    if (!text) return "";
+    // تبحث عن أي نص مكتوب بصيغة أقام/أرقام مثل 3/4 أو -5/2 وتحوله لخط أفقي
+    return text.replace(/(-?\d+)\s*\/\s*(-?\d+)/g, function(match, numerator, denominator) {
+      return `<span class="math-fraction"><span class="math-num">${numerator}</span><span class="math-den">${denominator}</span></span>`;
+    });
+  }
 
   async function loadDataFromCloud() {
     try {
@@ -527,11 +554,26 @@
   window.initializeAppReady = async function() {
     await loadDataFromCloud();
     renderLevelsGrid();
+    
     const params = new URLSearchParams(window.location.search);
     const lvl = params.get("level");
     const cls = params.get("class");
+    const exId = params.get("examId");
+
     if (lvl && cls) {
       currentLevel = lvl;
+      currentClass = cls;
+      if (exId) {
+        const classExams = (appDB.exams && appDB.exams[cls]) || [];
+        const foundEx = classExams.find(e => e.id === exId);
+        if (foundEx) {
+          activeExamObj = foundEx;
+          hideAllViews();
+          document.getElementById("viewStudentLogin").classList.remove("hidden");
+          document.getElementById("studentLoginClassTitle").innerText = cls + " - " + foundEx.title;
+          return;
+        }
+      }
       openClassTarget(cls);
     }
   };
@@ -644,7 +686,9 @@
 
   function closeSuccessModal() {
     document.getElementById("successModal").classList.add("hidden");
-    shareCurrentExamLink();
+    if (lastSharedExamId) {
+      shareSpecificExamLink(lastSharedExamId);
+    }
   }
 
   function selectLevel(lvl) {
@@ -827,11 +871,11 @@
     `;
     container.appendChild(div);
   }
+
   function removeQuestionBlock(qId) {
     const block = document.getElementById(`qBlock_${qId}`);
     if (block) block.remove();
   }
-
   function previewQuestionImage(event, qId) {
     const file = event.target.files[0];
     if (!file) return;
@@ -871,6 +915,8 @@
     if (!appDB.exams) appDB.exams = {};
     if (!appDB.exams[currentClass]) appDB.exams[currentClass] = [];
 
+    let targetExamId = editingExamId;
+
     if (editingExamId) {
       const existingExam = appDB.exams[currentClass].find(ex => ex.id === editingExamId);
       if (existingExam) {
@@ -878,12 +924,12 @@
         existingExam.questions = questions;
       }
     } else {
-      appDB.exams[currentClass].forEach(ex => ex.active = false);
+      targetExamId = "exam_" + Date.now();
       const newExam = {
-        id: "exam_" + Date.now(),
+        id: targetExamId,
         title: title,
         date: new Date().toLocaleDateString("fr-FR"),
-        active: true,
+        active: false,
         questions: questions,
         results: {}
       };
@@ -891,12 +937,13 @@
     }
     
     await saveDB();
+    lastSharedExamId = targetExamId;
     document.getElementById("successModal").classList.remove("hidden");
   }
 
-  function shareCurrentExamLink() {
+  function shareSpecificExamLink(examId) {
     const baseUrl = window.location.href.split("?")[0];
-    const directUrl = `${baseUrl}?level=${encodeURIComponent(currentLevel)}&class=${encodeURIComponent(currentClass)}`;
+    const directUrl = `${baseUrl}?level=${encodeURIComponent(currentLevel)}&class=${encodeURIComponent(currentClass)}&examId=${encodeURIComponent(examId)}`;
     const urlBox = document.getElementById("shareUrlBox");
     if (urlBox) urlBox.value = directUrl;
     const shareModal = document.getElementById("shareModal");
@@ -924,23 +971,37 @@
     if (!found) { alert("Code secret invalide."); return; }
 
     const classExams = (appDB.exams && appDB.exams[currentClass]) || [];
-    const activeExam = classExams.find(ex => ex.active);
-    if (!activeExam) { alert("Aucun examen actif."); return; }
+    
+    const params = new URLSearchParams(window.location.search);
+    const exIdParam = params.get("examId");
+    
+    let targetExam = null;
+    if (exIdParam) {
+      targetExam = classExams.find(ex => ex.id === exIdParam);
+    }
+    if (!targetExam && activeExamObj) {
+      targetExam = activeExamObj;
+    }
+    if (!targetExam) {
+      targetExam = classExams.find(ex => ex.active) || classExams[classExams.length - 1];
+    }
 
-    if (activeExam.results && activeExam.results[found.pin]) {
-      alert("Vous avez déjà passé cet examen ! Note : " + activeExam.results[found.pin].score + " / 20");
+    if (!targetExam) { alert("Aucun examen disponible."); return; }
+
+    if (targetExam.results && targetExam.results[found.pin]) {
+      alert("Vous avez déjà passé cet examen ! Note : " + targetExam.results[found.pin].score + " / 20");
       return;
     }
 
     currentStudent = { pin: found.pin, name: name };
-    activeExamObj = activeExam;
+    activeExamObj = targetExam;
     startStudentExam();
   }
 
   function startStudentExam() {
     hideAllViews();
     document.getElementById("viewStudentExam").classList.remove("hidden");
-    document.getElementById("activeExamTitle").innerText = activeExamObj.title;
+    document.getElementById("activeExamTitle").innerHTML = formatFractions(activeExamObj.title);
     document.getElementById("activeStudentLabel").innerText = `${currentStudent.name} (${currentClass})`;
     document.getElementById("btnSubmitExam").classList.remove("hidden");
     document.getElementById("studentScoreCard").classList.add("hidden");
@@ -955,12 +1016,12 @@
       card.className = "student-q-card";
       card.innerHTML = `
         <div style="font-weight:700; margin-bottom:8px; color:#d8b4fe;">Question ${qIdx + 1} (${q.pts} pts)</div>
-        <div style="margin-bottom:10px; line-height:1.4;">${q.text}</div>
+        <div style="margin-bottom:10px; line-height:1.4;">${formatFractions(q.text)}</div>
         ${q.img ? `<img src="${q.img}" class="preview-img" style="margin-bottom:10px;" />` : ""}
         <div>
           ${q.options.map((opt, oIdx) => opt ? `
             <button class="choice-btn" id="q_${qIdx}_opt_${oIdx}" onclick="selectStudentChoice(${qIdx}, ${oIdx})">
-              ${String.fromCharCode(65 + oIdx)}. ${opt}
+              ${String.fromCharCode(65 + oIdx)}. ${formatFractions(opt)}
             </button>
           ` : "").join("")}
         </div>
@@ -1032,7 +1093,6 @@
       const card = document.createElement("div");
       card.className = "archive-card";
       
-      // تصميم بطاقة الأرشيف مع أزرار واضحة ومستقلة لتعديل أو حذف أو عرض التقرير
       card.innerHTML = `
         <div>
           <div class="card-icon">${mathIcons[idx % mathIcons.length]}</div>
@@ -1041,6 +1101,7 @@
         </div>
         <div class="archive-actions">
           <button class="btn-action-card btn-edit-action" onclick="editExamFromArchive(event, '${ex.id}')">✏️ Modifier</button>
+          <button class="btn-action-card btn-share-action" onclick="shareExamFromArchive(event, '${ex.id}')">📤 Partager</button>
           <button class="btn-action-card btn-delete-action" onclick="deleteExamFromArchive(event, '${ex.id}')">🗑️ Supprimer</button>
           <button class="btn-action-card btn-report-action" onclick="openIndependentReport('${ex.id}')">📈 Rapport / Notes</button>
         </div>
@@ -1056,6 +1117,11 @@
     if (exam) {
       openExamCreator(exam);
     }
+  }
+
+  function shareExamFromArchive(e, examId) {
+    e.stopPropagation();
+    shareSpecificExamLink(examId);
   }
 
   async function deleteExamFromArchive(e, examId) {
@@ -1147,7 +1213,7 @@
     }
 
     const tbody = document.getElementById("gradesTableBody");
-    if (tbody) {
+    if, (tbody) {
       tbody.innerHTML = "";
       const allCodes = roster.length > 0 ? roster : Object.keys(resultsMap).map(p => ({ pin: p, name: resultsMap[p].name }));
 
