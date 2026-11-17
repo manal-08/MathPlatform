@@ -340,10 +340,10 @@
       <input type="text" id="examTitleInput" class="glass-input" placeholder="Ex: Évaluation N°1">
     </div>
 
-    <!-- قسم رفع الأسئلة من ملف (TXT أو نسخ نصي) -->
+    <!-- قسم رفع الأسئلة من ملف -->
     <div class="q-block" style="border-style: dashed; border-color: rgba(56, 189, 248, 0.4); text-align: center; padding: 14px;">
-      <div style="font-weight: 700; color: #38bdf8; margin-bottom: 6px;">📂 استيراد الأسئلة من ملف نصي (.txt)</div>
-      <p style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 10px;">ارفع ملف بصيغة TXT لتوليد الأسئلة تلقائياً بدون أخطاء الرموز</p>
+      <div style="font-weight: 700; color: #38bdf8; margin-bottom: 6px;">📂 استيراد الأسئلة من ملف (.txt)</div>
+      <p style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 10px;">ارفع ملف الأسئلة لتوزيعه تلقائياً على خانات منفصلة</p>
       <label class="btn-glass" style="background: rgba(56, 189, 248, 0.15); border-color: #38bdf8; display: inline-block; cursor: pointer;">
         📤 رفع ملف الأسئلة (.txt)
         <input type="file" accept=".txt" style="display:none;" onchange="handleExamFileUpload(event)">
@@ -365,8 +365,8 @@
         <p style="font-size:0.8rem; color:var(--text-muted);" id="archiveSubTitle">Classe : </p>
       </div>
       <button class="btn-glass" onclick="openProfClassHub()">← Retour</button>
-  </div>
-     <div id="archivesGrid" class="grid-2"></div>
+    </div>
+      <div id="archivesGrid" class="grid-2"></div>
   </section>
 
   <!-- VIEW 8 -->
@@ -747,6 +747,7 @@
     if (btnCls) btnCls.classList.remove("hidden");
     renderClassesGrid();
   }
+
   function renderClassesGrid() {
     const grid = document.getElementById("classesGrid");
     if (!grid) return;
@@ -783,7 +784,6 @@
     closeModals();
     renderClassesGrid();
   }
-
   async function deleteClass(e, cls) {
     e.stopPropagation();
     if (confirm("Supprimer la classe " + cls + " ?")) {
@@ -911,45 +911,78 @@
     container.appendChild(div);
   }
 
-  // معالجة استيراد الملفات النصية (.txt) لتفادي الرموز البرمجية
+  // دالة تحليل الملف واستخراج الأسئلة بشكل منفصل لكل سؤال
   function handleExamFileUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
     const reader = new FileReader();
     reader.onload = function(e) {
       const content = e.target.result;
-      const lines = content.split(/\r?\n/).filter(l => l.trim() !== "");
+      const lines = content.split(/\r?\n/);
       
-      let currentQ = { text: "", options: ["", "", "", ""], correct: 0, pts: 2 };
-      let optCount = 0;
+      let questionsList = [];
+      let currentQ = null;
 
-      lines.forEach(line => {
-        line = line.trim();
-        if (line.startsWith("Q:") || line.startsWith("السؤال:") || line.match(/^\d+[\.\-]/)) {
-          if (currentQ.text) {
-            addQuestionBlock(currentQ);
+      lines.forEach(rawLine => {
+        const line = rawLine.trim();
+        if (!line) return;
+
+        // التحقق مما إذا كان السطر يبدأ برقم سؤال (مثل 1. أو السؤال 1)
+        if (line.match(/^(\d+[\.\)]|السؤال\s*\d+|Q\s*\d+)/i)) {
+          if (currentQ) {
+            questionsList.push(currentQ);
           }
-          currentQ = { text: line.replace(/^(Q:|السؤال:|\d+[\.\-])\s*/, ""), options: ["", "", "", ""], correct: 0, pts: 2 };
-          optCount = 0;
-        } else if (line.startsWith("-") || line.startsWith("*") || line.match(/^[a-dA-D][\.\)]/)) {
-          const optText = line.replace(/^([-*]|[a-dA-D][\.\)])\s*/, "");
-          if (optCount < 4) {
-            currentQ.options[optCount] = optText;
-            if (line.includes("[x]") || line.includes("(صحيح)")) {
-              currentQ.correct = optCount;
+          let cleanText = line.replace(/^(\d+[\.\)]|السؤال\s*\d+|Q\s*\d+)\s*[:\-]?\s*/i, "");
+          currentQ = { text: cleanText, options: ["", "", "", ""], correct: 0, pts: 2 };
+        } 
+        // التحقق مما إذا كان السطر يمثل خياراً (أ، ب، ج، د أو A، B، C، D أو يبدأ بـ - أو *)
+        else if (line.match(/^([-*]|\b[a-dA-D][\.\)])/i)) {
+          if (!currentQ) {
+            currentQ = { text: "سؤال مستورد", options: ["", "", "", ""], correct: 0, pts: 2 };
+          }
+          let optText = line.replace(/^([-*]|\b[a-dA-D][\.\)])\s*/i, "");
+          let isCorrect = false;
+          if (optText.includes("[x]") || optText.includes("(صحيح)") || optText.includes("✓")) {
+            isCorrect = true;
+            optText = optText.replace(/(\[x\]|\(صحيح\)|✓)/g, "").trim();
+          }
+          
+          let emptyIdx = currentQ.options.findIndex(o => o === "");
+          if (emptyIdx !== -1) {
+            currentQ.options[emptyIdx] = optText;
+            if (isCorrect) currentQ.correct = emptyIdx;
+          }
+        } 
+        // إذا كان السطر تكملة لنص السؤال
+        else {
+          if (!currentQ) {
+            currentQ = { text: line, options: ["", "", "", ""], correct: 0, pts: 2 };
+          } else if (currentQ.options.every(o => o === "")) {
+            currentQ.text += " " + line;
+          } else {
+            let emptyIdx = currentQ.options.findIndex(o => o === "");
+            if (emptyIdx !== -1) {
+              currentQ.options[emptyIdx] = line;
             }
-            optCount++;
           }
-        } else {
-          if (!currentQ.text) currentQ.text = line;
-          else currentQ.text += " " + line;
         }
       });
 
-      if (currentQ.text) {
-        addQuestionBlock(currentQ);
+      if (currentQ) {
+        questionsList.push(currentQ);
       }
-      alert("✅ تم استيراد الأسئلة من الملف بنجاح!");
+
+      if (questionsList.length > 0) {
+        // تفريغ الحاويات القديمة وإضافة الأسئلة المستخرجة في خانات منفصلة
+        document.getElementById("questionsBuilderContainer").innerHTML = "";
+        questionCounter = 0;
+        questionsList.forEach(qData => {
+          addQuestionBlock(qData);
+        });
+        alert(`✅ تم استيراد وتوزيع ${questionsList.length} أسئلة في خانات منفصلة بنجاح!`);
+      } else {
+        alert("⚠️ لم يتم العثور على صيغة أسئلة صحيحة في الملف.");
+      }
     };
     reader.readAsText(file);
   }
@@ -1206,7 +1239,7 @@
       openExamCreator(exam);
     }
   }
-  
+
   function shareExamFromArchive(e, examId) {
     e.stopPropagation();
     shareSpecificExamLink(examId);
@@ -1259,7 +1292,7 @@
     const totalStuEl = document.getElementById("repTotalStu");
     if (totalStuEl) totalStuEl.innerText = totalEleves;
     const presentStuEl = document.getElementById("repPresentStu");
-    if (presentStuEl) presentStuEl.innerText = presents;
+        if (presentStuEl) presentStuEl.innerText = presents;
     const absentStuEl = document.getElementById("repAbsentStu");
     if (absentStuEl) absentStuEl.innerText = absents;
 
@@ -1351,4 +1384,3 @@
 </script>
 </body>
 </html>
-  
