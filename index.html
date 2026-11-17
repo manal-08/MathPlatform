@@ -339,8 +339,19 @@
       <label>Titre de l'examen</label>
       <input type="text" id="examTitleInput" class="glass-input" placeholder="Ex: Évaluation N°1">
     </div>
+
+    <!-- قسم رفع الأسئلة من ملف (PDF/Word/Text) -->
+    <div class="q-block" style="border-style: dashed; border-color: rgba(56, 189, 248, 0.4); text-align: center; padding: 14px;">
+      <div style="font-weight: 700; color: #38bdf8; margin-bottom: 6px;">📂 استيراد الأسئلة من ملف جاهز</div>
+      <p style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 10px;">ارفع ملف نصي (TXT) أو مستند لإنشاء الأسئلة تلقائياً</p>
+      <label class="btn-glass" style="background: rgba(56, 189, 248, 0.15); border-color: #38bdf8; display: inline-block; cursor: pointer;">
+        📤 رفع ملف الأسئلة
+        <input type="file" accept=".txt,.doc,.docx" style="display:none;" onchange="handleExamFileUpload(event)">
+      </label>
+    </div>
+
     <div id="questionsBuilderContainer"></div>
-    <button class="btn-glass" style="width:100%; margin-bottom:14px; border-style:dashed;" onclick="addQuestionBlock()">+ Ajouter une question</button>
+    <button class="btn-glass" style="width:100%; margin-bottom:14px; border-style:dashed;" onclick="addQuestionBlock()">+ Ajouter une question (يدوياً)</button>
     <div style="display:grid; grid-template-columns: 1fr; gap:10px;">
       <button class="btn-primary-gradient" style="margin-top:0;" onclick="saveAndActivateExam()">Enregistrer</button>
     </div>
@@ -373,7 +384,7 @@
     </div>
 
     <div id="tabReportContent">
-         <button class="btn-primary-gradient no-print" style="background: #10b981; margin-bottom: 14px;" onclick="window.print()">🖨️ Imprimer / PDF (A4)</button>
+      <button class="btn-primary-gradient no-print" style="background: #10b981; margin-bottom: 14px;" onclick="window.print()">🖨️ Imprimer / PDF (A4)</button>
       <div class="a4-sheet">
         <svg class="wave-top" viewBox="0 0 500 60" preserveAspectRatio="none">
           <path d="M0,0 L280,0 C190,45 90,25 0,55 Z" fill="#6b21a8" opacity="0.85"/>
@@ -900,6 +911,50 @@
     container.appendChild(div);
   }
 
+  // ميزة استيراد الأسئلة من ملف نصي أو مستند
+  function handleExamFileUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const content = e.target.result;
+      // تقسيم الملف حسب الأسطر أو الأسئلة
+      const lines = content.split(/\r?\n/).filter(l => l.trim() !== "");
+      
+      let currentQ = { text: "", options: ["", "", "", ""], correct: 0, pts: 2 };
+      let optCount = 0;
+
+      lines.forEach(line => {
+        line = line.trim();
+        if (line.startsWith("Q:") || line.startsWith("السؤال:") || line.match(/^\d+[\.\-]/)) {
+          if (currentQ.text) {
+            addQuestionBlock(currentQ);
+          }
+          currentQ = { text: line.replace(/^(Q:|السؤال:|\d+[\.\-])\s*/, ""), options: ["", "", "", ""], correct: 0, pts: 2 };
+          optCount = 0;
+        } else if (line.startsWith("-") || line.startsWith("*") || line.match(/^[a-dA-D][\.\)]/)) {
+          const optText = line.replace(/^([-*]|[a-dA-D][\.\)])\s*/, "");
+          if (optCount < 4) {
+            currentQ.options[optCount] = optText;
+            if (line.includes("[x]") || line.includes("(صحيح)")) {
+              currentQ.correct = optCount;
+            }
+            optCount++;
+          }
+        } else {
+          if (!currentQ.text) currentQ.text = line;
+          else currentQ.text += " " + line;
+        }
+      });
+
+      if (currentQ.text) {
+        addQuestionBlock(currentQ);
+      }
+      alert("✅ تم استيراد الأسئلة من الملف بنجاح!");
+    };
+    reader.readAsText(file);
+  }
+
   function removeQuestionBlock(qId) {
     const block = document.getElementById(`qBlock_${qId}`);
     if (block) block.remove();
@@ -929,6 +984,7 @@
     blocks.forEach(b => {
       const textEl = b.querySelector(".q-text");
       const ptsEl = b.querySelector(".q-pts");
+      if (!textEl) return; // تخطي الحاويات الأخرى مثل صندوق الرفع
       const text = textEl ? textEl.value.trim() : "";
       const pts = ptsEl ? (parseFloat(ptsEl.value) || 1) : 1;
       const imgEl = b.querySelector(".preview-img");
@@ -969,6 +1025,7 @@
     lastSharedExamId = targetExamId;
     document.getElementById("successModal").classList.remove("hidden");
   }
+
   function shareSpecificExamLink(examId) {
     const baseUrl = window.location.href.split("?")[0];
     const directUrl = `${baseUrl}?class=${encodeURIComponent(currentClass)}&examId=${encodeURIComponent(examId)}`;
@@ -1100,7 +1157,6 @@
     const scoreDisp = document.getElementById("finalScoreDisplay");
     if (scoreDisp) scoreDisp.innerText = `${finalOutOf20} / 20`;
   }
-
   async function openExamArchives() {
     await loadDataFromCloud();
     hideAllViews();
