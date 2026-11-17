@@ -340,13 +340,13 @@
       <input type="text" id="examTitleInput" class="glass-input" placeholder="Ex: Évaluation N°1">
     </div>
 
-    <!-- قسم رفع الأسئلة من ملف (PDF/Word/Text) -->
+    <!-- قسم رفع الأسئلة من ملف (TXT أو نسخ نصي) -->
     <div class="q-block" style="border-style: dashed; border-color: rgba(56, 189, 248, 0.4); text-align: center; padding: 14px;">
-      <div style="font-weight: 700; color: #38bdf8; margin-bottom: 6px;">📂 استيراد الأسئلة من ملف جاهز</div>
-      <p style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 10px;">ارفع ملف نصي (TXT) أو مستند لإنشاء الأسئلة تلقائياً</p>
+      <div style="font-weight: 700; color: #38bdf8; margin-bottom: 6px;">📂 استيراد الأسئلة من ملف نصي (.txt)</div>
+      <p style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 10px;">ارفع ملف بصيغة TXT لتوليد الأسئلة تلقائياً بدون أخطاء الرموز</p>
       <label class="btn-glass" style="background: rgba(56, 189, 248, 0.15); border-color: #38bdf8; display: inline-block; cursor: pointer;">
-        📤 رفع ملف الأسئلة
-        <input type="file" accept=".txt,.doc,.docx" style="display:none;" onchange="handleExamFileUpload(event)">
+        📤 رفع ملف الأسئلة (.txt)
+        <input type="file" accept=".txt" style="display:none;" onchange="handleExamFileUpload(event)">
       </label>
     </div>
 
@@ -365,8 +365,8 @@
         <p style="font-size:0.8rem; color:var(--text-muted);" id="archiveSubTitle">Classe : </p>
       </div>
       <button class="btn-glass" onclick="openProfClassHub()">← Retour</button>
-    </div>
-    <div id="archivesGrid" class="grid-2"></div>
+  </div>
+     <div id="archivesGrid" class="grid-2"></div>
   </section>
 
   <!-- VIEW 8 -->
@@ -737,6 +737,7 @@
       shareSpecificExamLink(lastSharedExamId);
     }
   }
+
   function selectLevel(lvl) {
     currentLevel = lvl;
     hideAllViews();
@@ -746,7 +747,6 @@
     if (btnCls) btnCls.classList.remove("hidden");
     renderClassesGrid();
   }
-
   function renderClassesGrid() {
     const grid = document.getElementById("classesGrid");
     if (!grid) return;
@@ -911,14 +911,13 @@
     container.appendChild(div);
   }
 
-  // ميزة استيراد الأسئلة من ملف نصي أو مستند
+  // معالجة استيراد الملفات النصية (.txt) لتفادي الرموز البرمجية
   function handleExamFileUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
     const reader = new FileReader();
     reader.onload = function(e) {
       const content = e.target.result;
-      // تقسيم الملف حسب الأسطر أو الأسئلة
       const lines = content.split(/\r?\n/).filter(l => l.trim() !== "");
       
       let currentQ = { text: "", options: ["", "", "", ""], correct: 0, pts: 2 };
@@ -984,7 +983,7 @@
     blocks.forEach(b => {
       const textEl = b.querySelector(".q-text");
       const ptsEl = b.querySelector(".q-pts");
-      if (!textEl) return; // تخطي الحاويات الأخرى مثل صندوق الرفع
+      if (!textEl) return;
       const text = textEl ? textEl.value.trim() : "";
       const pts = ptsEl ? (parseFloat(ptsEl.value) || 1) : 1;
       const imgEl = b.querySelector(".preview-img");
@@ -1157,6 +1156,7 @@
     const scoreDisp = document.getElementById("finalScoreDisplay");
     if (scoreDisp) scoreDisp.innerText = `${finalOutOf20} / 20`;
   }
+
   async function openExamArchives() {
     await loadDataFromCloud();
     hideAllViews();
@@ -1206,7 +1206,7 @@
       openExamCreator(exam);
     }
   }
-
+  
   function shareExamFromArchive(e, examId) {
     e.stopPropagation();
     shareSpecificExamLink(examId);
